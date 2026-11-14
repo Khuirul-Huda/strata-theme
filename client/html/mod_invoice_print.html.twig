@@ -1,0 +1,257 @@
+{% import 'macro_functions.html.twig' as mf %}
+{% set nr = invoice.issued ? invoice.serie_nr : invoice.id %}
+{% if invoice.credit_note_for_invoice_id %}
+    {% set doc_label = 'Credit Note'|trans %}
+{% elseif invoice.debit_note_for_invoice_id %}
+    {% set doc_label = 'Debit Note'|trans %}
+{% else %}
+    {% set doc_label = 'Invoice'|trans %}
+{% endif %}
+{% if invoice.status == 'canceled' %}
+    {% set doc_label = 'Canceled Invoice'|trans %}
+{% endif %}
+{% if not invoice.issued %}
+    {% set doc_label = 'Draft Invoice'|trans %}
+{% endif %}
+{% set seller = invoice.seller %}
+{% set buyer = invoice.buyer %}
+{% set company = guest.system_company %}
+{% set has_seller_bank = seller.account_number|trim or seller.bank_name|trim or seller.bic|trim or seller.note|default('')|trim %}
+
+<!DOCTYPE html>
+<html lang="{{ guest.system_locale|default('en_US')|slice(0, 2) }}" data-theme="strata" data-mode="light" data-accent="{{ settings.accent_color|default('blue') }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ doc_label }} #{{ nr }} - {{ company.name }}</title>
+    <link rel="shortcut icon" href="{{ company.favicon_url }}">
+    {{ 'build/css/strata.css'|asset_url|stylesheet_tag }}
+    <style>
+        @page {
+            size: auto;
+            margin: 14mm;
+        }
+        @media print {
+            body {
+                background: #fff !important;
+                color: #111 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-sheet {
+                border: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            .print-container {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-strata-canvas text-strata-default min-h-screen antialiased">
+    <!-- Top Print Action Bar (Hidden when printing) -->
+    <div class="no-print border-b border-strata-hairline bg-strata-base/95 sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+            <a href='{{ "invoice/#{invoice.hash}"|url }}' class="strata-btn strata-btn-secondary strata-btn-sm">
+                <span>&larr; {{ 'Back to Invoice'|trans }}</span>
+            </a>
+            <div class="flex items-center gap-2">
+                <a href='{{ "invoice/pdf/#{invoice.hash}"|url }}' target="_blank" class="strata-btn strata-btn-secondary strata-btn-sm">
+                    <span>{{ 'PDF'|trans }}</span>
+                </a>
+                <button type="button" onclick="window.print()" class="strata-btn strata-btn-primary strata-btn-sm">
+                    <span>{{ 'Print'|trans }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="print-container max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div class="print-sheet bg-strata-base border border-strata-hairline rounded-2xl shadow-xs overflow-hidden">
+            <!-- Letterhead & Metadata Header -->
+            <div class="p-6 sm:p-8 border-b border-strata-hairline flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+                <div class="space-y-2">
+                    {% if company.logo_url %}
+                        <img src="{{ company.logo_url }}" alt="{{ seller.company }}" class="h-8 w-auto object-contain" />
+                    {% else %}
+                        <h1 class="text-xl font-bold tracking-tight text-strata-strong">{{ seller.company }}</h1>
+                    {% endif %}
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-semibold uppercase tracking-widest text-strata-brand">{{ doc_label }}</span>
+                        <span class="text-xs font-mono text-strata-subtle">#{{ nr }}</span>
+                        {{ mf.status_badge(invoice.status, 'invoice') }}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-5 text-xs sm:text-end">
+                    <div>
+                        <span class="text-strata-subtle uppercase tracking-wider text-[11px] block">{{ 'Invoice Date'|trans }}</span>
+                        <span class="font-semibold text-strata-strong strata-tabular text-sm mt-0.5 block">
+                            {{ (invoice.paid_at|trim ? invoice.paid_at : invoice.created_at)|format_date }}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-strata-subtle uppercase tracking-wider text-[11px] block">
+                            {% if invoice.status == 'paid' and invoice.paid_at|trim %}{{ 'Paid Date'|trans }}{% else %}{{ 'Due Date'|trans }}{% endif %}
+                        </span>
+                        <span class="font-semibold strata-tabular text-sm mt-0.5 block {% if invoice.status == 'unpaid' %}text-strata-danger{% else %}text-strata-strong{% endif %}">
+                            {% if invoice.status == 'paid' and invoice.paid_at|trim %}
+                                {{ invoice.paid_at|format_date }}
+                            {% elseif invoice.due_at|trim %}
+                                {{ invoice.due_at|format_date }}
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-strata-subtle uppercase tracking-wider text-[11px] block">
+                            {% if invoice.status == 'paid' %}{{ 'Amount Paid'|trans }}{% else %}{{ 'Amount Due'|trans }}{% endif %}
+                        </span>
+                        <span class="font-bold text-strata-strong strata-tabular text-sm mt-0.5 block">
+                            {{ invoice.total|format_currency(invoice.currency ?? default_currency) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parties: From & Billed To -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 sm:p-8 border-b border-strata-hairline bg-strata-tint/35">
+                <div>
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-strata-subtle block mb-2">{{ 'From'|trans }}</span>
+                    <div class="font-semibold text-sm text-strata-strong">{{ seller.company }}</div>
+                    <div class="mt-1.5 space-y-1 text-xs text-strata-subtle leading-relaxed">
+                        {% if seller.address|trim %}<div class="whitespace-pre-line">{{ seller.address }}</div>{% endif %}
+                        {% if seller.company_vat|trim %}<div><span class="font-medium text-strata-default">{{ 'VAT'|trans }}:</span> {{ seller.company_vat }}</div>{% endif %}
+                        {% if seller.company_number|trim %}<div><span class="font-medium text-strata-default">{{ 'Company Number'|trans }}:</span> {{ seller.company_number }}</div>{% endif %}
+                        {% if seller.phone|trim %}<div><span class="font-medium text-strata-default">{{ 'Phone'|trans }}:</span> {{ seller.phone }}</div>{% endif %}
+                        {% if seller.email|trim %}<div><span class="font-medium text-strata-default">{{ 'Email'|trans }}:</span> {{ seller.email }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-strata-subtle block mb-2">{{ 'Billed To'|trans }}</span>
+                    {% if buyer.first_name|trim or buyer.last_name|trim %}
+                        <div class="font-semibold text-sm text-strata-strong">{{ buyer.first_name }} {{ buyer.last_name }}</div>
+                    {% endif %}
+                    {% if buyer.company|trim %}
+                        <div class="text-xs font-medium text-strata-default mt-0.5">{{ buyer.company }}</div>
+                    {% endif %}
+                    <div class="mt-1.5 space-y-1 text-xs text-strata-subtle leading-relaxed">
+                        {% if buyer.address|trim %}
+                            <div>
+                                {{ buyer.address }}<br>
+                                {{ buyer.city }}{% if buyer.state %}, {{ buyer.state }}{% endif %}{% if buyer.zip %} {{ buyer.zip }}{% endif %}<br>
+                                {{ buyer.country|country_name }}
+                            </div>
+                        {% endif %}
+                        {% if buyer.company_vat|trim %}<div><span class="font-medium text-strata-default">{{ 'VAT'|trans }}:</span> {{ buyer.company_vat }}</div>{% endif %}
+                        {% if buyer.company_number|trim %}<div><span class="font-medium text-strata-default">{{ 'Company Number'|trans }}:</span> {{ buyer.company_number }}</div>{% endif %}
+                        {% if buyer.phone|trim %}<div><span class="font-medium text-strata-default">{{ 'Phone'|trans }}:</span> {{ buyer.phone }}</div>{% endif %}
+                        {% if buyer.email|trim %}<div><span class="font-medium text-strata-default">{{ 'Email'|trans }}:</span> {{ buyer.email }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if invoice.text_1 %}
+                <div class="mx-6 sm:mx-8 mt-6 p-4 rounded-xl bg-strata-tint/50 border border-strata-hairline prose prose-sm max-w-none">
+                    {{ (invoice.text_1 ?? '')|markdown_to_html }}
+                </div>
+            {% endif %}
+
+            <!-- Line Items Table -->
+            <div class="overflow-x-auto px-6 sm:px-8 py-6">
+                <table class="strata-table">
+                    <thead>
+                        <tr>
+                            <th class="w-10 text-center">{{ '#'|trans }}</th>
+                            <th>{{ 'Description'|trans }}</th>
+                            <th class="text-center">{{ 'Quantity'|trans }}</th>
+                            <th class="text-end">{{ 'Unit Price'|trans }}</th>
+                            <th class="text-end">{{ 'Total'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i, item in invoice.lines %}
+                            <tr>
+                                <td class="text-center text-strata-subtle strata-tabular">{{ i + 1 }}</td>
+                                <td>
+                                    <div class="font-medium text-strata-strong">{{ item.title }}</div>
+                                    {% if item.period %}
+                                        <span class="text-xs text-strata-subtle block mt-0.5">{{ item.period }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center strata-tabular text-strata-default">
+                                    {{ item.quantity }} {% if item.unit %}<span class="text-xs text-strata-subtle">{{ item.unit }}</span>{% endif %}
+                                </td>
+                                <td class="text-end strata-tabular text-strata-default">
+                                    {{ item.price|format_currency(invoice.currency ?? default_currency) }}
+                                </td>
+                                <td class="text-end font-semibold text-strata-strong strata-tabular">
+                                    {{ item.total|format_currency(invoice.currency ?? default_currency) }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals & Notes Footer -->
+            <div class="p-6 sm:p-8 border-t border-strata-hairline bg-strata-base grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                <div class="md:col-span-6 space-y-3 text-xs text-strata-subtle">
+                    {% if has_seller_bank %}
+                        <div class="space-y-1">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-strata-strong block">{{ 'Payment Details'|trans }}</span>
+                            {% if seller.bank_name|trim %}<div><span class="font-medium text-strata-default">{{ 'Bank'|trans }}:</span> {{ seller.bank_name }}</div>{% endif %}
+                            {% if seller.account_number|trim %}<div><span class="font-medium text-strata-default">{{ 'Account'|trans }}:</span> <span class="font-mono">{{ seller.account_number }}</span></div>{% endif %}
+                            {% if seller.bic|trim %}<div><span class="font-medium text-strata-default">{{ 'BIC / SWIFT'|trans }}:</span> <span class="font-mono">{{ seller.bic }}</span></div>{% endif %}
+                            {% if seller.note|default('')|trim %}<p class="pt-1 italic text-strata-subtle">{{ seller.note }}</p>{% endif %}
+                        </div>
+                    {% endif %}
+                    {% if invoice.text_2 %}
+                        <div class="prose prose-sm max-w-none">
+                            {{ (invoice.text_2 ?? '')|markdown_to_html }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="md:col-span-6 md:col-start-7">
+                    <div class="w-full sm:max-w-xs sm:ml-auto space-y-2.5">
+                        <div class="flex items-center justify-between text-sm text-strata-subtle">
+                            <span>{{ 'Subtotal'|trans }}</span>
+                            <span class="strata-tabular text-strata-default font-medium">{{ (invoice.subtotal ?? invoice.total)|format_currency(invoice.currency ?? default_currency) }}</span>
+                        </div>
+
+                        {% if invoice.tax > 0 %}
+                            <div class="flex items-center justify-between text-sm text-strata-subtle">
+                                <span>{{ invoice.taxname }}{% if invoice.taxrate and '%' not in invoice.taxname %} ({{ invoice.taxrate }}%){% endif %}</span>
+                                <span class="strata-tabular text-strata-default font-medium">{{ invoice.tax|format_currency(invoice.currency ?? default_currency) }}</span>
+                            </div>
+                        {% endif %}
+
+                        {% if invoice.discount|default(0) > 0 %}
+                            <div class="flex items-center justify-between text-sm text-strata-success">
+                                <span>{{ 'Discount'|trans }}</span>
+                                <span class="strata-tabular font-medium">-{{ invoice.discount|format_currency(invoice.currency ?? default_currency) }}</span>
+                            </div>
+                        {% endif %}
+
+                        <div class="pt-3 border-t border-strata-line flex items-baseline justify-between">
+                            <span class="text-sm font-semibold uppercase tracking-wider text-strata-strong">
+                                {% if invoice.status == 'paid' %}{{ 'Total Paid'|trans }}{% else %}{{ 'Total Due'|trans }}{% endif %}
+                            </span>
+                            <span class="text-xl font-bold {% if invoice.status == 'paid' %}text-strata-success{% else %}text-strata-brand{% endif %} strata-tabular">
+                                {{ invoice.total|format_currency(invoice.currency ?? default_currency) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

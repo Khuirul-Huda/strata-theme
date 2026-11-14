@@ -160,4 +160,31 @@
     border: 0;
     border-top: 1px solid var(--color-strata-hairline);
   }
+
+  .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    margin: 1em 0;
+  }
+
+  .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.875rem;
+  }
+
+  .prose th,
+  .prose td {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-strata-line);
+    text-align: left;
+  }
+
+  .prose th {
+    background-color: var(--color-strata-tint);
+    font-weight: 600;
+    color: var(--text-color-strata-strong);
+  }
 }

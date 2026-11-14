@@ -464,6 +464,26 @@
     vertical-align: middle;
   }
 
+  .strata-table tfoot td,
+  .strata-table tfoot th {
+    padding: 0.875rem;
+    vertical-align: middle;
+  }
+
+  .strata-table thead th:first-child,
+  .strata-table tbody td:first-child,
+  .strata-table tfoot td:first-child,
+  .strata-table tfoot th:first-child {
+    padding-left: 1.25rem;
+  }
+
+  .strata-table thead th:last-child,
+  .strata-table tbody td:last-child,
+  .strata-table tfoot td:last-child,
+  .strata-table tfoot th:last-child {
+    padding-right: 1.25rem;
+  }
+
   .strata-table tbody tr:last-child td {
     border-bottom: 0;
   }

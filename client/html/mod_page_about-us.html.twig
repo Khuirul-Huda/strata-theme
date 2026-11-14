@@ -1,0 +1,48 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+
+{% set company = guest.system_company %}
+
+{% block meta_title %}{{ 'About Us'|trans }}{% endblock %}
+{% block meta_description %}{{ (company.note ?? company.signature ?? company.name)|markdown_to_html|striptags|trim|truncate(160) }}{% endblock %}
+
+{% block body_class %}about-us{% endblock %}
+{% block breadcrumb %}
+    <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ 'About'|trans }}</li>
+{% endblock %}
+
+{% block content %}
+    <div class="max-w-4xl mx-auto space-y-6" data-animate="fade-up">
+        <article class="rounded-2xl bg-strata-base border border-strata-hairline shadow-xs overflow-hidden">
+            <div class="p-6 sm:p-8 border-b border-strata-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-start gap-3.5">
+                    <div class="size-11 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center shrink-0">
+                        <svg class="size-5" aria-hidden="true"><use href="#info" /></svg>
+                    </div>
+                    <div>
+                        <span class="text-[11px] font-semibold uppercase tracking-widest text-strata-brand block">{{ company.name }}</span>
+                        <h1 class="text-2xl font-bold tracking-tight text-strata-strong mt-0.5">{{ 'About Us'|trans }}</h1>
+                        {% if company.signature|default('')|trim %}
+                            <p class="text-xs text-strata-subtle mt-1">{{ company.signature }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 sm:p-8 md:p-10">
+                <div class="prose max-w-none">
+                    {{ (company.note ?? '')|markdown_to_html }}
+                </div>
+            </div>
+
+            <div class="px-6 sm:px-8 py-4 border-t border-strata-hairline bg-strata-tint/40 flex flex-wrap items-center justify-between gap-3 text-xs text-strata-subtle">
+                <div class="flex items-center gap-4">
+                    <a href="{{ 'tos'|url }}" class="font-medium text-strata-brand hover:underline">{{ 'Terms of Service'|trans }}</a>
+                    <a href="{{ 'privacy-policy'|url }}" class="font-medium text-strata-brand hover:underline">{{ 'Privacy Policy'|trans }}</a>
+                </div>
+                <a href="{{ 'support/contact-us'|url }}" class="font-medium text-strata-subtle hover:text-strata-strong transition-colors">
+                    {{ 'Contact Us'|trans }}
+                </a>
+            </div>
+        </article>
+    </div>
+{% endblock %}
