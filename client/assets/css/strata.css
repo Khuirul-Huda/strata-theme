@@ -610,12 +610,13 @@
 
 @page {
   size: auto;
-  margin: 14mm;
+  margin: 10mm 12mm;
 }
 
 @media print {
   :root,
   :root[data-mode="dark"] {
+    font-size: 12.5px !important;
     color-scheme: light;
     --color-strata-canvas: #ffffff;
     --color-strata-base: #ffffff;
@@ -655,5 +656,21 @@
     box-shadow: none !important;
     border-radius: 0 !important;
     background: transparent !important;
+  }
+
+  .strata-print-sheet .strata-table,
+  .print-sheet .strata-table {
+    font-size: 0.875rem !important;
+  }
+
+  .strata-print-sheet .strata-table thead th,
+  .print-sheet .strata-table thead th {
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .strata-print-sheet .strata-table tbody td,
+  .print-sheet .strata-table tbody td {
+    padding: 0.65rem 0.75rem !important;
   }
 }
