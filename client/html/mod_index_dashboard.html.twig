@@ -92,23 +92,28 @@
             <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
                 <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
                 <div>
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center justify-between gap-3 mb-3">
                         <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Wallet Balance'|trans }}</span>
-                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center text-strata-subtle group-hover:bg-strata-brand/10 group-hover:text-strata-brand transition-colors">
+                        <div class="size-9 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center shrink-0 transition-colors group-hover:bg-strata-brand group-hover:text-white">
                             <svg class="size-4.5" aria-hidden="true"><use href="#wallet" /></svg>
                         </div>
                     </div>
-                    <div class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular">
+                    <div class="flex items-baseline gap-2 min-h-[2rem]">
+                        <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular">
+                            {% if profile.currency is not null %}
+                                {{ profile.balance|format_currency(profile.currency) }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </span>
                         {% if profile.currency is not null %}
-                            {{ profile.balance|format_currency(profile.currency) }}
-                        {% else %}
-                            -
+                            <span class="text-xs text-strata-subtle">{{ profile.currency }}</span>
                         {% endif %}
                     </div>
                 </div>
-                <a href="{{ 'client/balance'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                <a href="{{ 'client/balance'|url }}" class="inline-flex items-center justify-between gap-2 text-xs font-medium text-strata-subtle group-hover:text-strata-brand transition-colors mt-4 pt-3 border-t border-strata-hairline">
                     <span>{{ 'Manage funds'|trans }}</span>
-                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    <svg class="size-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
                 </a>
             </div>
 
@@ -116,20 +121,20 @@
             <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
                 <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
                 <div>
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center justify-between gap-3 mb-3">
                         <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Active Services'|trans }}</span>
-                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center text-strata-subtle group-hover:bg-strata-success-tint group-hover:text-strata-success transition-colors">
+                        <div class="size-9 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center shrink-0 transition-colors group-hover:bg-strata-brand group-hover:text-white">
                             <svg class="size-4.5" aria-hidden="true"><use href="#server" /></svg>
                         </div>
                     </div>
-                    <div class="flex items-baseline gap-2">
+                    <div class="flex items-baseline gap-2 min-h-[2rem]">
                         <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular" data-count-to="{{ dashboard.orders.active }}">{{ dashboard.orders.active }}</span>
                         <span class="text-xs text-strata-subtle">/ {{ dashboard.orders.total }} {{ 'total'|trans }}</span>
                     </div>
                 </div>
-                <a href="{{ 'order/service'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                <a href="{{ 'order/service'|url }}" class="inline-flex items-center justify-between gap-2 text-xs font-medium text-strata-subtle group-hover:text-strata-brand transition-colors mt-4 pt-3 border-t border-strata-hairline">
                     <span>{{ 'All Services'|trans }}</span>
-                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    <svg class="size-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
                 </a>
             </div>
 
@@ -137,20 +142,20 @@
             <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
                 <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
                 <div>
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center justify-between gap-3 mb-3">
                         <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Unpaid Invoices'|trans }}</span>
-                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center {% if dashboard.invoices.unpaid > 0 %}text-strata-warning bg-strata-warning-tint{% else %}text-strata-subtle{% endif %} transition-colors">
+                        <div class="size-9 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center shrink-0 transition-colors group-hover:bg-strata-brand group-hover:text-white">
                             <svg class="size-4.5" aria-hidden="true"><use href="#receipt" /></svg>
                         </div>
                     </div>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-2xl font-bold tracking-tight {% if dashboard.invoices.unpaid > 0 %}text-strata-warning{% else %}text-strata-strong{% endif %} strata-tabular" data-count-to="{{ dashboard.invoices.unpaid }}">{{ dashboard.invoices.unpaid }}</span>
+                    <div class="flex items-baseline gap-2 min-h-[2rem]">
+                        <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular" data-count-to="{{ dashboard.invoices.unpaid }}">{{ dashboard.invoices.unpaid }}</span>
                         <span class="text-xs text-strata-subtle">/ {{ dashboard.invoices.total }} {{ 'total'|trans }}</span>
                     </div>
                 </div>
-                <a href="{{ 'invoice'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                <a href="{{ 'invoice'|url }}" class="inline-flex items-center justify-between gap-2 text-xs font-medium text-strata-subtle group-hover:text-strata-brand transition-colors mt-4 pt-3 border-t border-strata-hairline">
                     <span>{{ 'All Invoices'|trans }}</span>
-                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    <svg class="size-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
                 </a>
             </div>
 
@@ -158,24 +163,20 @@
             <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
                 <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
                 <div>
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center justify-between gap-3 mb-3">
                         <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Open Tickets'|trans }}</span>
-                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center text-strata-subtle group-hover:bg-strata-info-tint group-hover:text-strata-info transition-colors">
+                        <div class="size-9 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center shrink-0 transition-colors group-hover:bg-strata-brand group-hover:text-white">
                             <svg class="size-4.5" aria-hidden="true"><use href="#ticket" /></svg>
                         </div>
                     </div>
-                    <div class="flex items-baseline gap-2">
+                    <div class="flex items-baseline gap-2 min-h-[2rem]">
                         <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular" data-count-to="{{ dashboard.tickets.open }}">{{ dashboard.tickets.open }}</span>
-                        {% if dashboard.tickets.on_hold > 0 %}
-                            <span class="text-xs text-strata-warning font-medium">({{ dashboard.tickets.on_hold }} {{ 'on hold'|trans }})</span>
-                        {% else %}
-                            <span class="text-xs text-strata-subtle">/ {{ dashboard.tickets.total }} {{ 'total'|trans }}</span>
-                        {% endif %}
+                        <span class="text-xs text-strata-subtle">/ {{ dashboard.tickets.total }} {{ 'total'|trans }}{% if dashboard.tickets.on_hold > 0 %} &middot; {{ dashboard.tickets.on_hold }} {{ 'on hold'|trans }}{% endif %}</span>
                     </div>
                 </div>
-                <a href="{{ 'support'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                <a href="{{ 'support'|url }}" class="inline-flex items-center justify-between gap-2 text-xs font-medium text-strata-subtle group-hover:text-strata-brand transition-colors mt-4 pt-3 border-t border-strata-hairline">
                     <span>{{ 'Help & Support'|trans }}</span>
-                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    <svg class="size-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
                 </a>
             </div>
         </div>

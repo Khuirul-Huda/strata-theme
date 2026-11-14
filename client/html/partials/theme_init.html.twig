@@ -5,12 +5,12 @@
         const root = document.documentElement;
         const defaultMode = {{ settings.theme|default('light')|json_encode|raw }};
         const defaultMotion = {{ settings.motion_intensity|default('full')|json_encode|raw }};
-        const defaultAccent = {{ settings.accent_color|default('orange')|json_encode|raw }};
+        const defaultAccent = {{ settings.accent_color|default('blue')|json_encode|raw }};
         const sidebarCollapsible = {{ (settings.sidebar_collapsible|default('1') in ['1', 1, true, 'true', 'on']) ? 'true' : 'false' }};
 
         root.setAttribute('data-theme', 'strata');
         root.setAttribute('data-motion', ['full', 'subtle', 'off'].includes(defaultMotion) ? defaultMotion : 'full');
-        root.setAttribute('data-accent', ['orange', 'blue', 'emerald', 'violet'].includes(defaultAccent) ? defaultAccent : 'orange');
+        root.setAttribute('data-accent', ['blue', 'orange', 'emerald', 'violet'].includes(defaultAccent) ? defaultAccent : 'blue');
 
         let activeMode = defaultMode === 'dark' ? 'dark' : 'light';
         try {

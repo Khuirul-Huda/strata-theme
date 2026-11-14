@@ -127,16 +127,27 @@
                 {# Promo Code & Summary Grid #}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                     {# Promo code block #}
-                    <div class="rounded-xl bg-strata-recessed border border-strata-hairline p-4 space-y-3">
-                        <div class="flex items-center gap-2 text-sm font-semibold text-strata-strong">
-                            <svg class="size-4 text-strata-brand" aria-hidden="true"><use href="#tag" /></svg>
-                            <span>{{ 'Promo Code'|trans }}</span>
+                    <div class="rounded-xl bg-strata-base border border-strata-line p-5 shadow-xs space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 text-sm font-semibold text-strata-strong">
+                                <div class="size-7 rounded-lg bg-strata-brand/10 text-strata-brand flex items-center justify-center">
+                                    <svg class="size-3.5" aria-hidden="true"><use href="#tag" /></svg>
+                                </div>
+                                <span>{{ 'Promo Code'|trans }}</span>
+                            </div>
+                            {% if not cart.promocode %}
+                                <a href="#" id="show-promo-field" class="text-xs font-medium text-strata-brand hover:underline">{{ 'Have a coupon code?'|trans }}</a>
+                            {% endif %}
                         </div>
-                        {% if not cart.promocode %}
-                            <a href="#" id="show-promo-field" class="text-xs text-strata-brand hover:underline inline-block">{{ 'Have a coupon code?'|trans }}</a>
-                        {% endif %}
+                        <p class="text-xs text-strata-subtle">
+                            {% if cart.promocode %}
+                                {{ 'Active code:'|trans }} <span class="font-mono font-semibold text-strata-strong">{{ cart.promocode }}</span>
+                            {% else %}
+                                {{ 'Apply a discount or promotional code to your order before checkout.'|trans }}
+                            {% endif %}
+                        </p>
                         <form method="post" action="{{ 'cart/apply_promo'|api_url(role: 'guest') }}" {{ fb_api_form({message: 'Promo Code Applied to Order'|trans, reload: true}) }}
-                              id="apply-promo" {% if not cart.promocode %}style="display:none"{% endif %} class="space-y-2">
+                              id="apply-promo" {% if not cart.promocode %}style="display:none"{% endif %} class="space-y-2 pt-1">
                             <div class="flex gap-2">
                                 <input type="text" name="promocode" id="promocode" value="{{ request.promocode|default(cart.promocode) }}"
                                        placeholder="{{ 'Enter promo code'|trans }}"
@@ -151,7 +162,7 @@
                     </div>
 
                     {# Totals & Checkout block #}
-                    <div class="rounded-xl bg-strata-recessed border border-strata-hairline p-5 space-y-4">
+                    <div class="rounded-xl bg-strata-base border border-strata-line p-5 shadow-xs space-y-4">
                         <div class="space-y-2 text-sm">
                             {% if cart.discount > 0 %}
                                 <div class="flex justify-between text-strata-subtle">
@@ -192,18 +203,17 @@
                             {% if cart.total and not enough_in_balance %}
                                 <div class="space-y-2">
                                     <label class="block text-xs font-semibold text-strata-strong uppercase tracking-wider">{{ 'Payment Method'|trans }}</label>
-                                    <div class="grid grid-cols-2 gap-2.5">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                         {% set gateway_selected = false %}
                                         {% for gtw in guest.invoice_gateways %}
                                             {% if cart.currency.code in gtw.accepted_currencies and (gtw.allow_single or (cart.subscribable|default(false) and gtw.allow_recurrent)) %}
                                                 {% set gateway_input_id = 'order-gateway-' ~ gtw.id %}
-                                                <label class="relative flex items-center gap-2 rounded-xl border border-strata-line bg-strata-base p-3 cursor-pointer hover:border-strata-brand transition-colors has-[:checked]:border-strata-brand has-[:checked]:bg-strata-brand/5">
-                                                    <input type="radio" name="gateway_id" id="{{ gateway_input_id }}" value="{{ gtw.id }}" class="accent-strata-brand size-4" {{ not gateway_selected ? 'checked' : '' }} />
+                                                <label class="relative flex items-center gap-2.5 rounded-xl border border-strata-line bg-strata-base p-3 cursor-pointer hover:border-strata-brand hover:bg-strata-tint/50 transition-colors has-[:checked]:border-strata-brand has-[:checked]:ring-1 has-[:checked]:ring-strata-brand has-[:checked]:bg-strata-brand/5">
+                                                    <input type="radio" name="gateway_id" id="{{ gateway_input_id }}" value="{{ gtw.id }}" class="accent-strata-brand size-4 shrink-0" {{ not gateway_selected ? 'checked' : '' }} />
                                                     {% if gtw.logo.logo %}
-                                                        <img src="{{ gtw.logo.logo }}" alt="{{ gtw.title }}" class="h-6 max-w-24 object-contain" />
-                                                    {% else %}
-                                                        <span class="text-xs font-semibold text-strata-strong truncate">{{ gtw.title }}</span>
+                                                        <img src="{{ gtw.logo.logo }}" alt="{{ gtw.title }}" class="h-5 max-w-10 object-contain shrink-0" />
                                                     {% endif %}
+                                                    <span class="text-xs sm:text-sm font-semibold text-strata-strong truncate">{{ gtw.title }}</span>
                                                 </label>
                                                 {% set gateway_selected = true %}
                                             {% endif %}
@@ -244,7 +254,7 @@
             </div>
 
             {# Payment HTML container for iframe / gateways #}
-            <div id="payment-html" class="hidden rounded-xl bg-strata-recessed border border-strata-hairline p-5">
+            <div id="payment-html" class="hidden rounded-xl bg-strata-base border border-strata-line p-5 shadow-xs">
                 <div id="payment-html-inner"></div>
             </div>
         </div>
