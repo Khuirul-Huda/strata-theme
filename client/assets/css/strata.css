@@ -607,3 +607,38 @@
     backdrop-filter: blur(4px);
   }
 }
+
+@page {
+  size: auto;
+  margin: 14mm;
+}
+
+@media print {
+  :root,
+  :root[data-mode="dark"] {
+    color-scheme: light;
+    --color-strata-canvas: #ffffff;
+    --color-strata-base: #ffffff;
+    --color-strata-elevated: #ffffff;
+    --color-strata-tint: #f4f4f5;
+    --color-strata-line: #d4d4d8;
+    --color-strata-hairline: #e4e4e7;
+    --text-color-strata-strong: #09090b;
+    --text-color-strata-default: #27272a;
+    --text-color-strata-subtle: #52525b;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #18181b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [data-animate],
+  [data-stagger-item] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

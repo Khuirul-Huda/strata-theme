@@ -97,7 +97,7 @@
         <aside id="strata-sidebar"
                data-sidebar
                {% if sidebar_collapsible %}data-collapsible="true"{% endif %}
-               class="hidden md:flex md:flex-col md:shrink-0 w-64 [[data-sidebar-collapsed=true]_&]:w-[4.5rem] transition-[width] duration-200 ease-out bg-strata-base border-r border-strata-hairline sticky top-0 h-screen z-30"
+               class="hidden md:flex md:flex-col md:shrink-0 w-64 [[data-sidebar-collapsed=true]_&]:w-[4.5rem] transition-[width] duration-200 ease-out bg-strata-base border-r border-strata-hairline sticky top-0 h-screen z-30 print:hidden"
                aria-label="{{ 'Primary navigation'|trans }}">
             <div class="h-16 px-4 [[data-sidebar-collapsed=true]_&]:px-2 flex items-center justify-between [[data-sidebar-collapsed=true]_&]:justify-center gap-2 border-b border-strata-hairline shrink-0">
                 <div class="min-w-0 flex items-center [[data-sidebar-collapsed=true]_&]:hidden">
@@ -130,7 +130,7 @@
     {% endif %}
 
     <div class="flex-1 min-w-0 flex flex-col">
-        <header class="sticky top-0 z-30 bg-strata-canvas/85 backdrop-blur-md border-b border-strata-hairline">
+        <header class="sticky top-0 z-30 bg-strata-canvas/85 backdrop-blur-md border-b border-strata-hairline print:hidden">
             {{ render_widgets('client.theme.header.start') }}
             <div class="h-16 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3 min-w-0">
@@ -299,11 +299,11 @@
 
         {{ include('mobile_menu.html.twig') }}
 
-        <main class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6" role="main">
+        <main class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:max-w-none print:p-0" role="main">
             {% block content_before %}{% endblock %}
 
             {% if settings.show_breadcrumb %}
-                <div class="mb-5 empty:hidden" data-animate="fade-up">
+                <div class="mb-5 empty:hidden print:hidden" data-animate="fade-up">
                     {% block breadcrumbs %}
                         <nav aria-label="{{ 'breadcrumb'|trans }}">
                             <ol class="strata-breadcrumb flex flex-wrap items-center gap-1.5 text-sm text-strata-subtle list-none m-0 p-0">
@@ -329,7 +329,7 @@
 
         {% if settings.footer_enabled %}
             {% set footer_slogan_text = settings.footer_slogan|default('')|trim ?: company.signature|default('') %}
-            <footer id="footer" class="w-full border-t border-strata-hairline bg-strata-base/70 mt-auto">
+            <footer id="footer" class="w-full border-t border-strata-hairline bg-strata-base/70 mt-auto print:hidden">
                 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
                     {{ render_widgets('client.theme.footer.start') }}
 
