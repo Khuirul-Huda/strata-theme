@@ -1,0 +1,635 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'invoices' %}
+
+{% import "macro_functions.html.twig" as mf %}
+
+{% set nr = invoice.serie_nr %}
+{% if invoice.credit_note_for_invoice_id %}
+    {% set doc_label = 'Credit Note'|trans %}
+{% elseif invoice.debit_note_for_invoice_id %}
+    {% set doc_label = 'Debit Note'|trans %}
+{% else %}
+    {% set doc_label = 'Invoice'|trans %}
+{% endif %}
+{% if invoice.status == 'canceled' %}
+    {% set doc_label = 'Canceled Invoice'|trans %}
+{% endif %}
+{% if not invoice.issued %}
+    {% set doc_label = 'Draft Invoice'|trans %}
+    {% set nr = invoice.id %}
+{% endif %}
+
+{% block meta_title %}{{ doc_label }} #{{ nr }}{% endblock %}
+
+{% block body_class %}invoice-invoice{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a class="hover:text-strata-strong transition-colors" href="{{ 'invoice'|url }}">{{ 'Invoices'|trans }}</a></li>
+    <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">#{{ nr }}</li>
+{% endblock %}
+
+{% block content %}
+{{ render_widgets('client.invoice.invoice.content.before', { 'invoice': invoice }) }}
+
+{% set seller = invoice.seller %}
+{% set buyer = invoice.buyer %}
+{% set company = guest.system_company %}
+
+<div class="space-y-6" data-animate="fade-up">
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-strata-hairline">
+        <div>
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-2xl font-bold tracking-tight text-strata-strong">
+                    {{ doc_label }} <span class="strata-tabular">#{{ nr }}</span>
+                </h1>
+                {{ mf.status_badge(invoice.status, 'invoice') }}
+            </div>
+            {% if invoice.credit_note_for_invoice_id or invoice.debit_note_for_invoice_id or invoice.refunded_by_invoice_ids or invoice.debited_by_invoice_ids %}
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-strata-subtle">
+                    {% if invoice.credit_note_for_invoice_id or invoice.debit_note_for_invoice_id %}
+                        <span>{{ 'Refers to invoice'|trans }}: <strong class="text-strata-default font-medium">#{{ invoice.related_invoices[invoice.credit_note_for_invoice_id ?? invoice.debit_note_for_invoice_id]|default(invoice.credit_note_for_invoice_id ?? invoice.debit_note_for_invoice_id) }}</strong></span>
+                    {% endif %}
+                    {% if invoice.refunded_by_invoice_ids %}
+                        <span>{{ 'Credited by'|trans }}: <strong class="text-strata-default font-medium">{% for ref_id in invoice.refunded_by_invoice_ids %}#{{ invoice.related_invoices[ref_id]|default(ref_id) }}{% if not loop.last %}, {% endif %}{% endfor %}</strong></span>
+                    {% endif %}
+                    {% if invoice.debited_by_invoice_ids %}
+                        <span>{{ 'Debited by'|trans }}: <strong class="text-strata-default font-medium">{% for ref_id in invoice.debited_by_invoice_ids %}#{{ invoice.related_invoices[ref_id]|default(ref_id) }}{% if not loop.last %}, {% endif %}{% endfor %}</strong></span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+            <a href='{{ "invoice/pdf/#{invoice.hash}"|url }}' target="_blank" class="strata-btn strata-btn-secondary strata-btn-sm" title="{{ 'PDF'|trans }}">
+                <svg class="size-4" aria-hidden="true"><use href="#download" /></svg>
+                <span>{{ 'PDF'|trans }}</span>
+            </a>
+            <a href='{{ "invoice/print/#{invoice.hash}"|url }}' target="_blank" class="strata-btn strata-btn-secondary strata-btn-sm" title="{{ 'Print'|trans }}">
+                <svg class="size-4" aria-hidden="true"><use href="#file-text" /></svg>
+                <span>{{ 'Print'|trans }}</span>
+            </a>
+            {% if invoice.status == 'unpaid' %}
+                <a href="#payment-section" class="strata-btn strata-btn-primary strata-btn-sm">
+                    <svg class="size-4" aria-hidden="true"><use href="#credit-card" /></svg>
+                    <span>{{ 'Pay Now'|trans }}</span>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Canceled Invoice Notice -->
+    {% if invoice.status == 'canceled' %}
+        <div class="strata-alert strata-alert-warning" role="alert">
+            <svg class="size-5 shrink-0 text-strata-warning" aria-hidden="true"><use href="#warning" /></svg>
+            <div>
+                <p class="font-medium text-strata-strong">{{ 'This invoice was canceled and can no longer be paid.'|trans }}</p>
+                {% if invoice.replaced_by_invoice_id %}
+                    <p class="text-xs text-strata-subtle mt-1">
+                        {{ 'A replacement invoice has been issued. You can find it in your invoices list.'|trans }}
+                        <a href="{{ 'invoice'|url }}" class="text-strata-link font-medium underline">{{ 'View invoices'|trans }}</a>
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Payment Gateway Selection Card (Only for Unpaid Invoices) -->
+    {% if invoice.status == 'unpaid' %}
+        <div id="payment-section" class="strata-card border-strata-brand/30 shadow-xs" data-animate="fade-up">
+            <div class="strata-card-header bg-strata-elevated">
+                <div class="flex items-center gap-2.5">
+                    <div class="size-8 rounded-lg bg-strata-brand/10 text-strata-brand flex items-center justify-center">
+                        <svg class="size-4" aria-hidden="true"><use href="#credit-card" /></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-semibold text-strata-strong">{{ 'Payment methods'|trans }}</h2>
+                        <p class="text-xs text-strata-subtle">{{ 'Please choose a payment type and pay for your chosen products.'|trans }}</p>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="text-xs text-strata-subtle block">{{ 'Amount Due'|trans }}</span>
+                    <span class="text-base font-bold text-strata-strong strata-tabular">{{ invoice.total|format_currency(invoice.currency ?? default_currency) }}</span>
+                </div>
+            </div>
+
+            <div class="strata-card-body">
+                <form method="post" action="{{ 'invoice/payment'|api_url(role: 'guest') }}"
+                      {{ fb_api_form({ redirect: ("invoice/#{invoice.hash}")|url(query: { 'auto_redirect': 1 }) }) }}
+                      id="payment-form">
+                    <input type="hidden" name="hash" value="{{ invoice.hash }}"/>
+                    <input type="hidden" name="gateway_id" id="gateway_id" value="{{ invoice.gateway_id|default('') }}">
+
+                    <!-- Payment Gateways Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                        {% set active_gateway_count = 0 %}
+                        {% for gtw in guest.invoice_gateways %}
+                            {% if invoice.currency in gtw.accepted_currencies and (gtw.allow_single or (invoice.subscribable and gtw.allow_recurrent)) %}
+                                {% set active_gateway_count = active_gateway_count + 1 %}
+                                {% set is_selected = (invoice.gateway_id and invoice.gateway_id == gtw.id) or (active_gateway_count == 1 and not invoice.gateway_id) %}
+                                <div class="gateway-card relative flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer select-none bg-strata-base hover:border-strata-brand hover:bg-strata-fill-hover {% if is_selected %}border-strata-brand ring-1 ring-strata-brand bg-strata-brand/5{% else %}border-strata-line{% endif %}"
+                                     id="card-gtw-{{ gtw.id }}"
+                                     onclick="selectAndPromptGateway('{{ gtw.id }}', {{ gtw.allow_recurrent ? 'true' : 'false' }}, {{ gtw.allow_single ? 'true' : 'false' }}, `{{ gtw.title|e('js') }}`)"
+                                     data-gateway-id="{{ gtw.id }}"
+                                     data-title="{{ gtw.title|e('html_attr') }}"
+                                     data-recurrent="{{ gtw.allow_recurrent ? 'true' : 'false' }}"
+                                     data-single="{{ gtw.allow_single ? 'true' : 'false' }}">
+                                    <div class="flex items-center justify-between gap-2 mb-2">
+                                        <span class="text-xs font-semibold text-strata-strong truncate">{{ gtw.title }}</span>
+                                        <input type="radio"
+                                               class="gateway-radio size-4 text-strata-brand accent-strata-brand cursor-pointer"
+                                               name="gateway_radio"
+                                               id="gtw-radio-{{ gtw.id }}"
+                                               value="{{ gtw.id }}"
+                                               {% if is_selected %}checked{% endif %}
+                                               onclick="event.stopPropagation(); selectAndPromptGateway('{{ gtw.id }}', {{ gtw.allow_recurrent ? 'true' : 'false' }}, {{ gtw.allow_single ? 'true' : 'false' }}, `{{ gtw.title|e('js') }}`)">
+                                    </div>
+
+                                    <div class="h-12 w-full flex items-center justify-center p-1 my-1">
+                                        {% if gtw.logo.custom|default(false) %}
+                                            <picture class="flex items-center justify-center max-h-12 max-w-full">
+                                                {% if gtw.logo.avif|default(null) %}
+                                                    <source srcset="{{ gtw.logo.avif }}" type="image/avif">
+                                                {% endif %}
+                                                <img src="{{ gtw.logo.logo }}" alt="{{ gtw.title }}" class="max-h-12 max-w-full object-contain mx-auto">
+                                            </picture>
+                                        {% else %}
+                                            <picture class="flex items-center justify-center max-h-10 max-w-full">
+                                                {% if gtw.logo.avif|default(null) %}
+                                                    <source srcset="{{ gtw.logo.avif }}" type="image/avif">
+                                                {% endif %}
+                                                <img src="{{ gtw.logo.logo }}" alt="{{ gtw.title }}" class="max-h-10 max-w-full object-contain mx-auto">
+                                            </picture>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="mt-2 pt-2 border-t border-strata-hairline flex items-center justify-between text-xs text-strata-subtle">
+                                        {% if gtw.allow_recurrent and invoice.subscribable %}
+                                            <span class="inline-flex items-center gap-1 text-strata-brand font-medium">
+                                                <svg class="size-3.5" aria-hidden="true"><use href="#arrows-exchange" /></svg>
+                                                <span>{{ 'Subscription'|trans }}</span>
+                                            </span>
+                                        {% elseif gtw.allow_single %}
+                                            <span class="inline-flex items-center gap-1">
+                                                <svg class="size-3.5" aria-hidden="true"><use href="#credit-card" /></svg>
+                                                <span>{{ 'One-time'|trans }}</span>
+                                            </span>
+                                        {% else %}
+                                            <span></span>
+                                        {% endif %}
+                                        <span class="font-medium strata-tabular text-strata-default">{{ invoice.currency }}</span>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Payment Action Footer -->
+                    <div class="pt-3 border-t border-strata-hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="flex items-center gap-2 text-xs text-strata-subtle">
+                            <svg class="size-4 text-strata-success shrink-0" aria-hidden="true"><use href="#shield-check" /></svg>
+                            <span>{{ 'Payments are securely processed and encrypted.'|trans }}</span>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button type="button"
+                                    id="btn-pay-now"
+                                    onclick="triggerCurrentPaymentPrompt()"
+                                    class="strata-btn strata-btn-primary px-5 py-2 font-semibold text-sm shadow-xs w-full sm:w-auto">
+                                <svg class="size-4" aria-hidden="true"><use href="#credit-card" /></svg>
+                                <span>{{ 'Pay'|trans }} <span class="strata-tabular">{{ invoice.total|format_currency(invoice.currency ?? default_currency) }}</span></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Crisp Billing Document Card -->
+    <div class="strata-card shadow-xs" data-animate="fade-up">
+        <div class="strata-card-body p-6 sm:p-8">
+            <!-- Document Meta Header -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pb-8 border-b border-strata-hairline">
+                <!-- Seller / Company (From) -->
+                <div>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-strata-subtle block mb-2">{{ 'From'|trans }}</span>
+                    <h2 class="text-lg font-bold text-strata-strong">{{ seller.company }}</h2>
+
+                    <div class="mt-2 space-y-1 text-xs text-strata-subtle leading-relaxed">
+                        {% if seller.company_vat|trim %}
+                            <div><span class="font-medium text-strata-default">{{ 'VAT'|trans }}:</span> {{ seller.company_vat }}</div>
+                        {% endif %}
+                        {% if seller.company_number|trim %}
+                            <div><span class="font-medium text-strata-default">{{ 'Company Number'|trans }}:</span> {{ seller.company_number }}</div>
+                        {% endif %}
+                        {% if seller.address|trim %}
+                            <div class="mt-1 whitespace-pre-line">{{ seller.address }}</div>
+                        {% endif %}
+                        {% if seller.phone|trim %}
+                            <div><span class="font-medium text-strata-default">{{ 'Phone'|trans }}:</span> {{ seller.phone }}</div>
+                        {% endif %}
+                        {% if seller.email|trim %}
+                            <div><span class="font-medium text-strata-default">{{ 'Email'|trans }}:</span> <a href="mailto:{{ seller.email }}" class="text-strata-link hover:underline">{{ seller.email }}</a></div>
+                        {% endif %}
+                        {% if seller.account_number|trim or seller.bank_name|trim or seller.bic|trim %}
+                            <div class="mt-3 pt-2.5 border-t border-strata-hairline">
+                                {% if seller.bank_name|trim %}<div><span class="font-medium text-strata-default">{{ 'Bank'|trans }}:</span> {{ seller.bank_name }}</div>{% endif %}
+                                {% if seller.account_number|trim %}<div><span class="font-medium text-strata-default">{{ 'Account'|trans }}:</span> {{ seller.account_number }}</div>{% endif %}
+                                {% if seller.bic|trim %}<div><span class="font-medium text-strata-default">{{ 'BIC / SWIFT'|trans }}:</span> {{ seller.bic }}</div>{% endif %}
+                            </div>
+                        {% endif %}
+                        {% if seller.note|default('')|trim %}
+                            <p class="mt-2 italic text-strata-subtle">{{ seller.note }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Buyer / Client (Billed To) + Dates -->
+                <div class="flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-strata-subtle block mb-2">{{ 'Billed To'|trans }}</span>
+                        {% if buyer.first_name|trim or buyer.last_name|trim %}
+                            <h2 class="text-lg font-bold text-strata-strong">{{ buyer.first_name }} {{ buyer.last_name }}</h2>
+                        {% endif %}
+                        {% if buyer.company|trim %}
+                            <div class="text-sm font-medium text-strata-default mt-0.5">{{ buyer.company }}</div>
+                        {% endif %}
+
+                        <div class="mt-2 space-y-1 text-xs text-strata-subtle leading-relaxed">
+                            {% if buyer.company_vat|trim %}
+                                <div><span class="font-medium text-strata-default">{{ 'VAT'|trans }}:</span> {{ buyer.company_vat }}</div>
+                            {% endif %}
+                            {% if buyer.company_number|trim %}
+                                <div><span class="font-medium text-strata-default">{{ 'Company Number'|trans }}:</span> {{ buyer.company_number }}</div>
+                            {% endif %}
+                            {% if buyer.address|trim %}
+                                <div class="mt-1">
+                                    {{ buyer.address }}<br>
+                                    {{ buyer.city }}{% if buyer.state %}, {{ buyer.state }}{% endif %}{% if buyer.zip %} {{ buyer.zip }}{% endif %}<br>
+                                    {{ buyer.country|country_name }}
+                                </div>
+                            {% endif %}
+                            {% if buyer.phone|trim %}
+                                <div class="mt-1"><span class="font-medium text-strata-default">{{ 'Phone'|trans }}:</span> {{ buyer.phone }}</div>
+                            {% endif %}
+                            {% if buyer.email|trim %}
+                                <div><span class="font-medium text-strata-default">{{ 'Email'|trans }}:</span> <a href="mailto:{{ buyer.email }}" class="text-strata-link hover:underline">{{ buyer.email }}</a></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Key Dates Pill Box -->
+                    <div class="mt-4 p-3.5 rounded-xl bg-strata-recessed border border-strata-hairline grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <span class="text-strata-subtle block">{{ 'Invoice Date'|trans }}</span>
+                            <span class="font-semibold text-strata-strong strata-tabular text-sm">
+                                {{ (invoice.paid_at|trim ? invoice.paid_at : invoice.created_at)|format_date }}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-strata-subtle block">{{ 'Due Date'|trans }}</span>
+                            <span class="font-semibold strata-tabular text-sm {% if invoice.status == 'unpaid' %}text-strata-danger{% else %}text-strata-strong{% endif %}">
+                                {% if invoice.due_at|trim %}{{ invoice.due_at|format_date }}{% else %}&mdash;{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Text 1 (if available) -->
+            {% if invoice.text_1 %}
+                <div class="my-6 p-4 rounded-xl bg-strata-recessed border border-strata-hairline text-sm text-strata-default leading-relaxed">
+                    {{ (invoice.text_1 ?? '')|markdown_to_html }}
+                </div>
+            {% endif %}
+
+            <!-- Line Items Table -->
+            <div class="overflow-x-auto my-6">
+                <table class="strata-table">
+                    <thead>
+                        <tr>
+                            <th class="w-12 text-center">{{ '#'|trans }}</th>
+                            <th>{{ 'Description'|trans }}</th>
+                            <th class="text-center">{{ 'Quantity'|trans }}</th>
+                            <th class="text-end">{{ 'Unit Price'|trans }}</th>
+                            <th class="text-end">{{ 'Total'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody data-stagger>
+                        {% for i, item in invoice.lines %}
+                            <tr data-stagger-item>
+                                <td class="text-center text-strata-subtle strata-tabular">{{ i + 1 }}</td>
+                                <td>
+                                    <div class="font-medium text-strata-strong">
+                                        {% if item.order_id %}
+                                            <a class="text-strata-link hover:underline" href='{{ "order/service/manage/#{item.order_id}"|url }}'>{{ item.title }}</a>
+                                        {% else %}
+                                            {{ item.title }}
+                                        {% endif %}
+                                    </div>
+                                    {% if item.period %}
+                                        <span class="text-xs text-strata-subtle block mt-0.5">{{ item.period }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center strata-tabular text-strata-default">
+                                    {{ item.quantity }} {% if item.unit %}<span class="text-xs text-strata-subtle">{{ item.unit }}</span>{% endif %}
+                                </td>
+                                <td class="text-end strata-tabular text-strata-default">
+                                    {{ item.price|format_currency(invoice.currency ?? default_currency) }}
+                                </td>
+                                <td class="text-end font-semibold text-strata-strong strata-tabular">
+                                    {{ item.total|format_currency(invoice.currency ?? default_currency) }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals Section -->
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-end mt-4">
+                <div class="w-full sm:w-80 space-y-2 p-4 rounded-xl bg-strata-recessed border border-strata-hairline">
+                    <div class="flex items-center justify-between text-sm text-strata-subtle">
+                        <span>{{ 'Subtotal'|trans }}</span>
+                        <span class="strata-tabular text-strata-default font-medium">{{ (invoice.subtotal ?? invoice.total)|format_currency(invoice.currency ?? default_currency) }}</span>
+                    </div>
+
+                    {% if invoice.tax > 0 %}
+                        <div class="flex items-center justify-between text-sm text-strata-subtle">
+                            <span>{{ invoice.taxname }} ({{ invoice.taxrate }}%)</span>
+                            <span class="strata-tabular text-strata-default font-medium">{{ invoice.tax|format_currency(invoice.currency ?? default_currency) }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if invoice.discount|default(0) > 0 %}
+                        <div class="flex items-center justify-between text-sm text-strata-success">
+                            <span>{{ 'Discount'|trans }}</span>
+                            <span class="strata-tabular font-medium">-{{ invoice.discount|format_currency(invoice.currency ?? default_currency) }}</span>
+                        </div>
+                    {% endif %}
+
+                    <div class="pt-2 border-t border-strata-hairline flex items-center justify-between">
+                        <span class="text-base font-bold text-strata-strong">{{ 'Total'|trans }}</span>
+                        <span class="text-lg font-bold text-strata-strong strata-tabular">{{ invoice.total|format_currency(invoice.currency ?? default_currency) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Text 2 (if available) -->
+            {% if invoice.text_2 %}
+                <div class="my-6 p-4 rounded-xl bg-strata-recessed border border-strata-hairline text-sm text-strata-default leading-relaxed">
+                    {{ (invoice.text_2 ?? '')|markdown_to_html }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Transaction History Card (If Transactions Exist) -->
+    {% set tx_list = invoice.transactions|default(client ? client.invoice_transaction_get_list({ 'invoice_id': invoice.id }).list : []) %}
+    {% if tx_list|length > 0 %}
+        <div class="strata-card" data-animate="fade-up">
+            <div class="strata-card-header">
+                <div class="flex items-center gap-2">
+                    <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#clock" /></svg>
+                    <h2 class="text-sm font-semibold text-strata-strong">{{ 'Transaction History'|trans }}</h2>
+                </div>
+                <span class="strata-badge strata-badge-neutral strata-tabular">{{ tx_list|length }}</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="strata-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'Transaction ID'|trans }}</th>
+                            <th>{{ 'Gateway'|trans }}</th>
+                            <th>{{ 'Date'|trans }}</th>
+                            <th>{{ 'Status'|trans }}</th>
+                            <th class="text-end">{{ 'Amount'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody data-stagger>
+                        {% for tx in tx_list %}
+                            <tr data-stagger-item>
+                                <td class="font-mono text-xs text-strata-subtle">{{ tx.txn_id|default('#' ~ tx.id) }}</td>
+                                <td>{{ tx.gateway|default('-') }}</td>
+                                <td class="strata-tabular text-strata-subtle">{{ tx.created_at|format_date }}</td>
+                                <td>{{ mf.status_badge(tx.status, 'tx') }}</td>
+                                <td class="text-end font-semibold text-strata-strong strata-tabular">{{ tx.amount|format_currency(tx.currency ?? invoice.currency ?? default_currency) }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Payment Prompt Modal (Native Accessible Dialog with Bootstrap Fallback) -->
+<dialog id="paymentPrompt" class="strata-dialog m-auto rounded-2xl bg-strata-base text-strata-default border border-strata-line shadow-2xl p-0 max-w-lg w-[calc(100%-2rem)] backdrop:bg-black/50 backdrop:backdrop-blur-xs">
+    <div class="modal-dialog m-0 w-full max-w-none">
+        <div class="modal-content border-0 bg-transparent shadow-none">
+            <div class="modal-header flex items-center justify-between p-5 border-b border-strata-hairline">
+                <h3 class="modal-title text-base font-semibold text-strata-strong" id="paymentPromptLabel">{{ 'Payment Method'|trans }}</h3>
+                <button type="button" class="btn-close size-8 rounded-lg flex items-center justify-center text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover cursor-pointer" onclick="closePaymentPrompt()" aria-label="{{ 'Close'|trans }}">
+                    <svg class="size-4" aria-hidden="true"><use href="#x" /></svg>
+                </button>
+            </div>
+            <div class="modal-body p-5 space-y-4">
+                <p id="bodyText" class="text-sm text-strata-default leading-relaxed"></p>
+                <div class="flex flex-col gap-2 pt-2">
+                    <a href="#" class="strata-btn strata-btn-primary w-full justify-center" id="single">
+                        <svg class="size-4" aria-hidden="true"><use href="#credit-card" /></svg>
+                        <span>{{ "Pay Now with a One-Time Payment"|trans }}</span>
+                    </a>
+                    <a href="#" class="strata-btn strata-btn-primary w-full justify-center" id="subscription" hidden>
+                        <svg class="size-4" aria-hidden="true"><use href="#arrows-exchange" /></svg>
+                        <span>{{ "Pay Now and Create a Subscription"|trans }}</span>
+                    </a>
+                    <a href="#" class="strata-btn strata-btn-primary w-full justify-center" id="pay-nondescript" hidden>
+                        <svg class="size-4" aria-hidden="true"><use href="#credit-card" /></svg>
+                        <span>{{ "Pay Now"|trans }}</span>
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer flex items-center justify-end p-4 border-t border-strata-hairline bg-strata-elevated/40">
+                <button type="button" class="strata-btn strata-btn-secondary strata-btn-sm" onclick="closePaymentPrompt()">{{ 'Cancel'|trans }}</button>
+            </div>
+        </div>
+    </div>
+</dialog>
+
+{{ render_widgets('client.invoice.invoice.content.after', { 'invoice': invoice }) }}
+{% endblock %}
+
+{% block js %}
+<script>
+    let currentSelectedGateway = null;
+
+    function selectAndPromptGateway(id, supportsSubscription, supportsOneTime, title) {
+        selectGateway(id);
+        paymentPrompt(id, supportsSubscription, supportsOneTime, title);
+    }
+
+    function selectGateway(id) {
+        const hiddenInput = document.getElementById('gateway_id');
+        if (hiddenInput) hiddenInput.value = id;
+
+        document.querySelectorAll('.gateway-card').forEach(card => {
+            const isMatch = card.dataset.gatewayId === String(id);
+            if (isMatch) {
+                card.classList.add('border-strata-brand', 'ring-1', 'ring-strata-brand', 'bg-strata-brand/5');
+                card.classList.remove('border-strata-line');
+                const radio = card.querySelector('.gateway-radio');
+                if (radio) radio.checked = true;
+                currentSelectedGateway = {
+                    id: id,
+                    title: card.dataset.title,
+                    recurrent: card.dataset.recurrent === 'true',
+                    single: card.dataset.single === 'true'
+                };
+            } else {
+                card.classList.remove('border-strata-brand', 'ring-1', 'ring-strata-brand', 'bg-strata-brand/5');
+                card.classList.add('border-strata-line');
+            }
+        });
+    }
+
+    function triggerCurrentPaymentPrompt() {
+        if (!currentSelectedGateway) {
+            const firstCard = document.querySelector('.gateway-card');
+            if (firstCard) {
+                firstCard.click();
+                return;
+            }
+        }
+        if (currentSelectedGateway) {
+            paymentPrompt(
+                currentSelectedGateway.id,
+                currentSelectedGateway.recurrent,
+                currentSelectedGateway.single,
+                currentSelectedGateway.title
+            );
+        }
+    }
+
+    function openPaymentDialog() {
+        const dialog = document.getElementById('paymentPrompt');
+        if (!dialog) return;
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            try {
+                const bsModal = bootstrap.Modal.getOrCreateInstance(dialog);
+                bsModal.show();
+                return;
+            } catch (e) {}
+        }
+        if (typeof dialog.showModal === 'function') {
+            dialog.showModal();
+        } else {
+            dialog.setAttribute('open', '');
+        }
+    }
+
+    function closePaymentPrompt() {
+        const dialog = document.getElementById('paymentPrompt');
+        if (!dialog) return;
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            try {
+                const bsModal = bootstrap.Modal.getInstance(dialog);
+                if (bsModal) bsModal.hide();
+            } catch (e) {}
+        }
+        if (typeof dialog.close === 'function' && dialog.open) {
+            dialog.close();
+        } else {
+            dialog.removeAttribute('open');
+        }
+    }
+
+    // Close dialog when clicking outside on backdrop
+    document.addEventListener('DOMContentLoaded', function() {
+        const dialog = document.getElementById('paymentPrompt');
+        if (dialog) {
+            dialog.addEventListener('click', function(e) {
+                if (e.target === dialog) closePaymentPrompt();
+            });
+        }
+
+        // Initialize first gateway selection
+        const preselected = document.querySelector('.gateway-card.border-strata-brand');
+        if (preselected) {
+            currentSelectedGateway = {
+                id: preselected.dataset.gatewayId,
+                title: preselected.dataset.title,
+                recurrent: preselected.dataset.recurrent === 'true',
+                single: preselected.dataset.single === 'true'
+            };
+            const hiddenInput = document.getElementById('gateway_id');
+            if (hiddenInput && !hiddenInput.value) hiddenInput.value = preselected.dataset.gatewayId;
+        }
+    });
+
+    function paymentPrompt(id, supportsSubscription, supportsOneTime, title) {
+        const invoiceHash = "{{ invoice.hash }}";
+        const backLink = "{{ 'invoice/banklink'|url }}";
+        const paymentLink = new URL(backLink.concat('/', invoiceHash, '/', id));
+        const invoiceSubscribable = {{ invoice.subscribable ? 'true' : 'false' }};
+
+        {% set anyGatewayDoesSubscriptions = false %}
+        {% set anyGatewayDoesOneTime = false %}
+        {% for gtw in guest.invoice_gateways %}
+            {% if gtw.allow_recurrent %}
+                {% set anyGatewayDoesSubscriptions = true %}
+            {% endif %}
+            {% if gtw.allow_single %}
+                {% set anyGatewayDoesOneTime = true %}
+            {% endif %}
+        {% endfor %}
+
+        const canAnyGatewayDoSubs = {{ anyGatewayDoesSubscriptions ? 'true' : 'false' }};
+        const canAnyGatewayDoOneTime = {{ anyGatewayDoesOneTime ? 'true' : 'false' }};
+
+        const singleBtn = document.getElementById('single');
+        const subscriptionBtn = document.getElementById('subscription');
+        const genericBtn = document.getElementById('pay-nondescript');
+        const bodyText = document.getElementById('bodyText');
+        const titleLabel = document.getElementById('paymentPromptLabel');
+
+        if (singleBtn) singleBtn.hidden = true;
+        if (subscriptionBtn) subscriptionBtn.hidden = true;
+        if (genericBtn) genericBtn.hidden = true;
+
+        {% if settings.prompt_subscription|default('0') %}
+            if (supportsSubscription && supportsOneTime && invoiceSubscribable) {
+                if (bodyText) bodyText.textContent = `{{ 'The invoice you are paying and your chosen payment gateway both support subscription payments. What type of payment would you like to continue with?'|trans }}`;
+                if (subscriptionBtn) subscriptionBtn.hidden = false;
+                if (singleBtn) singleBtn.hidden = false;
+            } else if (supportsSubscription && invoiceSubscribable) {
+                if (bodyText) bodyText.textContent = `{{ 'The invoice you are paying and your chosen payment gateway both support subscription payments. What type of payment would you like to continue with?'|trans }}`;
+                if (subscriptionBtn) subscriptionBtn.hidden = false;
+            } else if (supportsOneTime) {
+                if (invoiceSubscribable && canAnyGatewayDoSubs) {
+                    if (bodyText) bodyText.textContent = `{{ 'If you are happy with the selected payment gateway, please use the button below to continue with it. Optionally, you may choose a different payment gateway if you wish to pay using a subscription.'|trans }}`;
+                } else {
+                    if (bodyText) bodyText.textContent = `{{ 'If you are happy with the selected payment gateway, please use the button below to continue with it.'|trans }}`;
+                }
+                if (singleBtn) singleBtn.hidden = false;
+            } else {
+                if (bodyText) bodyText.textContent = `{{ 'This payment gateway does not support any of the payment methods available for this invoice. Please choose a different payment gateway.'|trans }}`;
+            }
+        {% else %}
+            if (bodyText) bodyText.textContent = `{{ 'If you are happy with the selected payment gateway, please use the button below to continue with it.'|trans }}`;
+            if (genericBtn) genericBtn.hidden = false;
+        {% endif %}
+
+        if (titleLabel) titleLabel.textContent = `{{ 'Pay with'|trans }}`.concat(` `, title);
+        if (subscriptionBtn) subscriptionBtn.href = paymentLink.toString();
+        if (genericBtn) genericBtn.href = paymentLink.toString();
+
+        const singlePaymentLink = new URL(paymentLink.toString());
+        singlePaymentLink.searchParams.append('allow_subscription', '0');
+        if (singleBtn) singleBtn.href = singlePaymentLink.toString();
+
+        openPaymentDialog();
+    }
+</script>
+{% endblock %}

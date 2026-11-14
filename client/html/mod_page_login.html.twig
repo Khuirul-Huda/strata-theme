@@ -1,0 +1,96 @@
+{% extends "layout_public.html.twig" %}
+
+{% block meta_title %}{{ 'Login'|trans }}{% endblock %}
+{% block meta_description %}{{ 'Log in to manage your services, invoices, support tickets, and account details.'|trans }}{% endblock %}
+
+{% block body_class %}page-login{% endblock %}
+
+{% block body %}
+<div class="w-full max-w-md mx-auto" data-animate="fade-up">
+    {% if (public_logo_url or public_dark_logo_url) and settings.login_page_show_logo %}
+        <div class="flex justify-center mb-6">
+            {{ include('partial_company_logo.html.twig', {
+                company: company,
+                logo_url: public_logo_url,
+                dark_logo_url: public_dark_logo_url,
+                link_url: settings.login_page_logo_url|default('/'),
+                link_target: '_blank',
+                link_rel: 'noopener noreferrer',
+                image_class: 'max-h-12 w-auto object-contain',
+                image_height: '48px',
+                fallback_class: 'text-xl font-bold tracking-tight text-strata-strong'
+            }) }}
+        </div>
+    {% endif %}
+
+    <div class="relative bg-strata-base border border-strata-hairline rounded-2xl shadow-sm p-6 sm:p-8 overflow-hidden">
+        {# Subtle top highlight #}
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+
+        <div class="flex flex-col items-center text-center mb-6">
+            <div class="size-11 rounded-xl bg-strata-brand/10 text-strata-brand flex items-center justify-center mb-3 shadow-xs">
+                <svg class="size-5" aria-hidden="true"><use href="#sign-in" /></svg>
+            </div>
+            <h1 class="text-xl font-semibold text-strata-strong tracking-tight">{{ 'Login to Your Account'|trans }}</h1>
+            <p class="text-xs text-strata-subtle mt-1">{{ 'Enter your credentials to manage your services'|trans }}</p>
+        </div>
+
+        {{ render_widgets('client.page.login.form.before') }}
+
+        <form method="post" action="{{ 'client/login'|api_url(role: 'guest') }}" class="auth space-y-4" {{ fb_api_form({redirect: redirect_uri|default('/')|url}) }}>
+            <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}">
+
+            <div>
+                <label class="strata-label" for="email">{{ 'Email'|trans }}</label>
+                <div class="relative">
+                    <input class="strata-input pl-9" id="email" type="email" placeholder="{{ 'Enter your email address'|trans }}" name="email" value="{{ request.email }}" required="required" autofocus>
+                    <div class="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center text-strata-subtle">
+                        <svg class="size-4" aria-hidden="true"><use href="#mail" /></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="strata-label !mb-0" for="password">{{ 'Password'|trans }}</label>
+                    {% if settings.show_password_reset_link %}
+                        <a class="text-xs text-strata-subtle hover:text-strata-strong hover:underline transition-colors" href="{{ 'password-reset'|url }}">
+                            {{ 'Forgot Password?'|trans }}
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="relative">
+                    <input class="strata-input pl-9" id="password" type="password" placeholder="{{ 'Enter your password'|trans }}" name="password" required="required">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center text-strata-subtle">
+                        <svg class="size-4" aria-hidden="true"><use href="#lock" /></svg>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="strata-btn strata-btn-primary w-full py-2.5 text-sm font-medium shadow-xs">
+                <span>{{ 'Login'|trans }}</span>
+                <svg class="size-4" aria-hidden="true"><use href="#arrow-right" /></svg>
+            </button>
+        </form>
+
+        {{ render_widgets('client.page.login.form.after') }}
+
+        {% if settings.show_signup_link or settings.show_password_reset_link %}
+            <div class="mt-6 pt-5 border-t border-strata-hairline flex flex-col sm:flex-row gap-2.5">
+                {% if settings.show_signup_link %}
+                    <a class="strata-btn strata-btn-secondary flex-1 text-xs text-center justify-center" href="{{ 'signup'|url }}">
+                        <svg class="size-3.5 text-strata-subtle" aria-hidden="true"><use href="#user" /></svg>
+                        <span>{{ 'Create Account'|trans }}</span>
+                    </a>
+                {% endif %}
+                {% if settings.show_password_reset_link %}
+                    <a class="strata-btn strata-btn-secondary flex-1 text-xs text-center justify-center" href="{{ 'password-reset'|url }}">
+                        <svg class="size-3.5 text-strata-subtle" aria-hidden="true"><use href="#key" /></svg>
+                        <span>{{ 'Forgot Password?'|trans }}</span>
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

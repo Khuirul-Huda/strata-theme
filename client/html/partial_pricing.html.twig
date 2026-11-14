@@ -1,0 +1,87 @@
+<div class="box rounded-xl bg-strata-base border border-strata-hairline p-5 shadow-xs">
+    <div class="block pricing space-y-4">
+        {% set cart_currency = guest.cart_get_currency %}
+        <div class="total space-y-4">
+            {% if pricing.type == 'free' %}
+                {% if product.allow_quantity_select %}
+                    <label class="flex items-center justify-between gap-3 text-sm font-medium text-strata-default">
+                        <span>{{ 'Quantity:'|trans }}</span>
+                        <input type="text" name="quantity" value="1" class="w-20 rounded-lg bg-strata-control border border-strata-line px-3 py-1.5 text-sm text-strata-default text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-strata-focus" />
+                    </label>
+                    <hr class="border-strata-hairline" />
+                {% endif %}
+
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wider text-strata-subtle mb-1">{{ 'Total price:'|trans }}</p>
+                    <div class="currency text-2xl font-semibold tracking-tight text-strata-strong tabular-nums">{{ 0|format_currency(cart_currency.code) }}</div>
+                </div>
+            {% endif %}
+
+            {% if pricing.type == 'once' %}
+                {% if product.allow_quantity_select %}
+                    <label class="flex items-center justify-between gap-3 text-sm font-medium text-strata-default">
+                        <span>{{ 'Quantity:'|trans }}</span>
+                        <input type="text" name="quantity" value="1" class="w-20 rounded-lg bg-strata-control border border-strata-line px-3 py-1.5 text-sm text-strata-default text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-strata-focus" />
+                    </label>
+                    <hr class="border-strata-hairline" />
+                {% endif %}
+
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wider text-strata-subtle mb-1">{{ 'Total price:'|trans }}</p>
+                    <div class="currency text-2xl font-semibold tracking-tight text-strata-strong tabular-nums">{{ ((pricing.once.price + pricing.once.setup) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</div>
+                </div>
+            {% endif %}
+
+            {% if pricing.type == 'recurrent' %}
+                {% if product.allow_quantity_select %}
+                    <label class="flex items-center justify-between gap-3 text-sm font-medium text-strata-default">
+                        <span>{{ 'Quantity:'|trans }}</span>
+                        <input type="text" name="quantity" value="1" class="w-20 rounded-lg bg-strata-control border border-strata-line px-3 py-1.5 text-sm text-strata-default text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-strata-focus" />
+                    </label>
+                    <hr class="border-strata-hairline" />
+                {% endif %}
+
+                <div>
+                    <select name="period" id="period-selector" class="w-full rounded-lg bg-strata-control border border-strata-line px-3 py-2 text-sm text-strata-default focus:outline-none focus:ring-2 focus:ring-strata-focus">
+                        {% for code, prices in pricing.recurrent %}
+                            {% if prices.enabled %}
+                                <option value="{{ code }}"{% if request.period == code %} selected="selected"{% endif %}>{{ prices.title }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% for code, prices in pricing.recurrent %}
+                    {% if prices.enabled and prices.setup > 0 %}
+                        <div class="period {{ code }} rounded-lg bg-strata-recessed border border-strata-hairline p-3 text-sm" style="display: none;">
+                            <table class="w-full text-sm">
+                                <tr>
+                                    <td class="py-1 text-strata-subtle">{{ 'Price'|trans }}</td>
+                                    <td class="py-1 text-right font-medium text-strata-default tabular-nums">{{ (prices.price * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1 text-strata-subtle">{{ 'Setup Price'|trans }}</td>
+                                    <td class="py-1 text-right font-medium text-strata-default tabular-nums">{{ (prices.setup * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                <hr class="border-strata-hairline" />
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wider text-strata-subtle mb-1">{{ 'Total price:'|trans }}</p>
+                    {% for code, prices in pricing.recurrent %}
+                        <div class="currency period {{ code }} text-2xl font-semibold tracking-tight text-strata-strong tabular-nums">{{ ((prices.price + prices.setup) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        {% if product.addons|length > 0 %}
+            <button class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-strata-brand hover:bg-strata-brand-hover text-white font-medium px-4 py-2.5 text-sm transition-colors cursor-pointer" type="submit" id="order-button">{{ 'Continue'|trans }}</button>
+        {% else %}
+            <button class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-strata-brand hover:bg-strata-brand-hover text-white font-medium px-4 py-2.5 text-sm transition-colors cursor-pointer" type="submit" id="order-button">{{ 'Order now'|trans }}</button>
+        {% endif %}
+    </div>
+</div>

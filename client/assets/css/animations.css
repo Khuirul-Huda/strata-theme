@@ -1,0 +1,285 @@
+/* ==========================================================================
+   Strata Client Theme — Motion & Animations
+   Respects prefers-reduced-motion: reduce and :root[data-motion="off"].
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+:root {
+  --strata-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --strata-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --strata-duration-fast: 150ms;
+  --strata-duration-base: 240ms;
+  --strata-duration-slow: 360ms;
+}
+
+@keyframes strata-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes strata-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes strata-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes strata-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes strata-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes strata-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+@keyframes strata-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes strata-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes strata-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Interactive surfaces & tactile feedback */
+.strata-surface-interactive {
+  transition:
+    background-color var(--strata-duration-fast) var(--strata-ease-out),
+    border-color var(--strata-duration-fast) var(--strata-ease-out),
+    box-shadow var(--strata-duration-fast) var(--strata-ease-out),
+    transform var(--strata-duration-fast) var(--strata-ease-out);
+}
+
+.strata-surface-interactive:hover {
+  border-color: var(--color-strata-interact);
+}
+
+.strata-pressable:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Safe entrance hooks: elements always resolve to opacity: 1 even if JS fails */
+[data-animate] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) [data-animate="fade-in"]:not([data-animated="true"]) {
+    animation: strata-fade-in var(--strata-duration-base) var(--strata-ease-out) both;
+  }
+
+  :root:not([data-motion="off"]) [data-animate="fade-up"]:not([data-animated="true"]),
+  :root:not([data-motion="off"]) [data-animate=""] :where(*),
+  :root:not([data-motion="off"]) [data-animate=""]:not([data-animated="true"]) {
+    animation: strata-fade-up var(--strata-duration-slow) var(--strata-ease-out) both;
+  }
+
+  :root:not([data-motion="off"]) [data-animate="scale-in"]:not([data-animated="true"]) {
+    animation: strata-scale-in var(--strata-duration-base) var(--strata-ease-out) both;
+  }
+
+  :root:not([data-motion="off"]) [data-stagger] > [data-stagger-item]:not([data-animated="true"]) {
+    animation: strata-fade-up var(--strata-duration-base) var(--strata-ease-out) both;
+  }
+
+  :root:not([data-motion="off"]) [data-stagger] > [data-stagger-item]:nth-child(2) {
+    animation-delay: 40ms;
+  }
+  :root:not([data-motion="off"]) [data-stagger] > [data-stagger-item]:nth-child(3) {
+    animation-delay: 80ms;
+  }
+  :root:not([data-motion="off"]) [data-stagger] > [data-stagger-item]:nth-child(4) {
+    animation-delay: 120ms;
+  }
+  :root:not([data-motion="off"]) [data-stagger] > [data-stagger-item]:nth-child(n + 5) {
+    animation-delay: 160ms;
+  }
+}
+
+/* Native dialog entrance (@starting-style + keyframe fallback) */
+dialog.strata-dialog[open] {
+  animation: strata-dialog-in var(--strata-duration-base) var(--strata-ease-out);
+  transition:
+    opacity var(--strata-duration-fast) var(--strata-ease-out),
+    transform var(--strata-duration-base) var(--strata-ease-out),
+    display var(--strata-duration-fast) allow-discrete,
+    overlay var(--strata-duration-fast) allow-discrete;
+}
+
+dialog.strata-dialog::backdrop {
+  transition:
+    opacity var(--strata-duration-fast) var(--strata-ease-out),
+    display var(--strata-duration-fast) allow-discrete,
+    overlay var(--strata-duration-fast) allow-discrete;
+}
+
+@starting-style {
+  dialog.strata-dialog[open] {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  dialog.strata-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* Toast enter / exit */
+.strata-toast {
+  animation: strata-toast-in var(--strata-duration-base) var(--strata-ease-out);
+}
+
+.strata-toast[data-state="closing"] {
+  animation: strata-toast-out var(--strata-duration-fast) var(--strata-ease-out) forwards;
+}
+
+@starting-style {
+  .strata-toast {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+/* Skeleton shimmer */
+.strata-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background-color: var(--color-strata-fill);
+}
+
+.strata-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklch, var(--color-strata-base) 55%, transparent) 50%,
+    transparent 100%
+  );
+  animation: strata-shimmer 1.6s ease-in-out infinite;
+}
+
+/* Status pulse dot */
+.strata-pulse-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: currentColor;
+  animation: strata-pulse 2s ease-in-out infinite;
+}
+
+.strata-spin {
+  animation: strata-spin 0.8s linear infinite;
+}
+
+/* Reduced motion & explicit motion-off safety overrides */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-animate],
+  [data-stagger] > [data-stagger-item] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .strata-skeleton::after,
+  .strata-pulse-dot {
+    animation: none !important;
+  }
+}
+
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  view-transition-name: none !important;
+}
+
+:root[data-motion="off"] [data-animate],
+:root[data-motion="off"] [data-stagger] > [data-stagger-item] {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}

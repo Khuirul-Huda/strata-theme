@@ -1,0 +1,360 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+
+{% block meta_title %}{{ 'Profile Details'|trans }}{% endblock %}
+{% block page_header %}{{ 'User Profile Settings'|trans }}{% endblock %}
+{% block breadcrumb %}
+    <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ 'Profile'|trans }}</li>
+{% endblock %}
+
+{% block body_class %}client-profile{% endblock %}
+{% set required = guest.client_required %}
+
+{% block content %}
+<div class="flex flex-col gap-6" data-animate="fade-up">
+    {# Email verification alert #}
+    {% if (guest.client_is_email_validation_required) and (not profile.email_approved) %}
+        <div class="strata-alert strata-alert-danger flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <svg class="size-5 shrink-0" aria-hidden="true"><use href="#warning" /></svg>
+                <span class="text-sm font-medium">{{ 'You must verify your email address before you may access our services.'|trans }}</span>
+            </div>
+            <a class="strata-btn strata-btn-primary strata-btn-sm shrink-0"
+               href="{{ 'client/resend_email_verification'|api_url }}"
+               {{ fb_api_link({message: 'Verification Email Re-sent'|trans}) }}>
+                {{ 'Resend Verification Email'|trans }}
+            </a>
+        </div>
+    {% endif %}
+
+    {# Settings Tabs Shell #}
+    <div class="strata-card overflow-hidden">
+        {# Tab Header #}
+        <div class="px-4 sm:px-6 pt-4 border-b border-strata-hairline bg-strata-base">
+            <nav class="relative flex items-center gap-1 overflow-x-auto pb-0" role="tablist" data-tab-list aria-label="{{ 'Profile settings sections'|trans }}">
+                <span class="strata-nav-pill" data-nav-indicator aria-hidden="true"></span>
+                <button type="button" role="tab" id="details-tab"
+                        class="strata-nav-link active cursor-pointer"
+                        data-strata-tab="#details-tab-pane"
+                        data-bs-toggle="tab"
+                        data-bs-target="#details-tab-pane"
+                        aria-selected="true"
+                        aria-controls="details-tab-pane">
+                    <svg class="size-4 shrink-0" aria-hidden="true"><use href="#user" /></svg>
+                    <span>{{ 'Details'|trans }}</span>
+                </button>
+                <button type="button" role="tab" id="pass-tab"
+                        class="strata-nav-link cursor-pointer"
+                        data-strata-tab="#pass-tab-pane"
+                        data-bs-toggle="tab"
+                        data-bs-target="#pass-tab-pane"
+                        aria-selected="false"
+                        aria-controls="pass-tab-pane">
+                    <svg class="size-4 shrink-0" aria-hidden="true"><use href="#lock" /></svg>
+                    <span>{{ 'Change Password'|trans }}</span>
+                </button>
+                <button type="button" role="tab" id="apikey-tab"
+                        class="strata-nav-link cursor-pointer"
+                        data-strata-tab="#apikey-tab-pane"
+                        data-bs-toggle="tab"
+                        data-bs-target="#apikey-tab-pane"
+                        aria-selected="false"
+                        aria-controls="apikey-tab-pane">
+                    <svg class="size-4 shrink-0" aria-hidden="true"><use href="#key" /></svg>
+                    <span>{{ 'API Key'|trans }}</span>
+                </button>
+                <button type="button" role="tab" id="currency-tab"
+                        class="strata-nav-link cursor-pointer"
+                        data-strata-tab="#currency-tab-pane"
+                        data-bs-toggle="tab"
+                        data-bs-target="#currency-tab-pane"
+                        aria-selected="false"
+                        aria-controls="currency-tab-pane">
+                    <svg class="size-4 shrink-0" aria-hidden="true"><use href="#currency" /></svg>
+                    <span>{{ 'Currency'|trans }}</span>
+                </button>
+            </nav>
+        </div>
+
+        {# Tab Panels #}
+        <div class="tab-content">
+            {# 1. Details Panel #}
+            <div class="p-6 sm:p-8 tab-pane active" id="details-tab-pane" role="tabpanel" tabindex="0">
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold tracking-tight text-strata-strong">{{ 'Update Details'|trans }}</h2>
+                    <p class="text-sm text-strata-subtle mt-0.5">{{ 'Keep your personal data up to date.'|trans }}</p>
+                </div>
+
+                <form method="post" action="client/profile/update" id="profile-update" class="flex flex-col gap-6" {{ fb_api_form({message: 'Profile Updated'|trans}) }}>
+                    {# Avatar info #}
+                    <div class="p-4 rounded-xl bg-strata-recessed border border-strata-hairline flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                        {{ avatar(profile.email, 100, 'size-16 sm:size-20 rounded-full border border-strata-line object-cover shrink-0', null, 'div') }}
+                        <div>
+                            <span class="text-sm font-semibold text-strata-strong block">{{ profile.first_name }} {{ profile.last_name }}</span>
+                            <span class="text-xs text-strata-subtle block mt-0.5">{{ 'Avatar is derived deterministically from your email address.'|trans }}</span>
+                        </div>
+                    </div>
+
+                    {# Name fields #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="strata-label" for="first_name">{{ 'First Name'|trans }} <span class="text-strata-danger">*</span></label>
+                            <input type="text" class="strata-input" name="first_name" id="first_name" value="{{ profile.first_name }}" required>
+                        </div>
+                        <div>
+                            <label class="strata-label" for="last_name">
+                                {{ 'Last Name'|trans }}
+                                {% if "last_name" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="strata-input" id="last_name" name="last_name" value="{{ profile.last_name }}" {% if "last_name" in required %} required {% endif %}>
+                        </div>
+                    </div>
+
+                    {# Email & Phone #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="strata-label" for="email">{{ 'Email Address'|trans }} <span class="text-strata-danger">*</span></label>
+                            <input type="email" class="strata-input" id="email" name="email" value="{{ profile.email }}" required>
+                        </div>
+                        <div>
+                            <label class="strata-label" for="phone">
+                                {{ 'Phone Number'|trans }}
+                                {% if "phone" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="hidden" name="phone_cc" id="phone_cc" value="{{ profile.phone_cc }}">
+                            <input type="tel" class="strata-input js-phone-input" name="phone" id="phone" value="{{ profile.phone }}" autocomplete="tel" data-initial-country="{{ profile.country|lower }}" {% if "phone" in required %} required {% endif %}>
+                        </div>
+                    </div>
+
+                    {# Billing Email #}
+                    <div>
+                        <label class="strata-label" for="billing_email">{{ 'Billing Email Address'|trans }}</label>
+                        <input type="email" class="strata-input" id="billing_email" name="billing_email" value="{{ profile.billing_email }}" placeholder="{{ profile.email }}">
+                        <span class="text-xs text-strata-subtle mt-1 block">{{ 'Invoice notifications are sent here. Leave blank to use your account email.'|trans }}</span>
+                    </div>
+
+                    {# Birthday & Gender #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="strata-label" for="birthday">
+                                {{ 'Birthdate'|trans }}
+                                {% if "birthday" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="date" class="strata-input" id="birthday" name="birthday" value="{{ profile.birthday }}" {% if "birthday" in required %} required {% endif %}>
+                        </div>
+                        <div>
+                            <label class="strata-label" for="gender">
+                                {{ 'Gender'|trans }}
+                                {% if "gender" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <select class="strata-select" name="gender" id="gender" {% if "gender" in required %} required {% endif %}>
+                                <option value="male" {{ profile.gender == 'male' ? 'selected' : '' }}>{{ 'Male'|trans }}</option>
+                                <option value="female" {{ profile.gender == 'female' ? 'selected' : '' }}>{{ 'Female'|trans }}</option>
+                                <option value="nonbinary" {{ profile.gender == 'nonbinary' ? 'selected' : '' }}>{{ 'Non-binary'|trans }}</option>
+                                <option value="other" {% if profile.gender not in ['male', 'female', 'nonbinary'] %} selected {% endif %}>{{ 'Other'|trans }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {# Company #}
+                    <div>
+                        <label class="strata-label" for="company">
+                            {{ 'Company Name'|trans }}
+                            {% if "company" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                        </label>
+                        <input type="text" class="strata-input" name="company" id="company" value="{{ profile.company }}" {% if "company" in required %} required {% endif %}>
+                    </div>
+
+                    {# Company VAT & Number #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="strata-label" for="company_vat">{{ 'Company VAT'|trans }}</label>
+                            <input type="text" class="strata-input" name="company_vat" id="company_vat" value="{{ profile.company_vat }}">
+                        </div>
+                        <div>
+                            <label class="strata-label" for="company_number">{{ 'Company Number'|trans }}</label>
+                            <input type="text" class="strata-input" name="company_number" id="company_number" value="{{ profile.company_number }}">
+                        </div>
+                    </div>
+
+                    {# Addresses #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="strata-label" for="address_1">
+                                {{ 'Address'|trans }}
+                                {% if "address_1" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="strata-input" name="address_1" id="address_1" value="{{ profile.address_1 }}" {% if "address_1" in required %} required {% endif %}>
+                        </div>
+                        <div>
+                            <label class="strata-label" for="address_2">
+                                {{ 'Address 2'|trans }}
+                                {% if "address_2" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="strata-input" name="address_2" id="address_2" value="{{ profile.address_2 }}" {% if "address_2" in required %} required {% endif %}>
+                        </div>
+                    </div>
+
+                    {# City & Country #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="strata-label" for="city">
+                                {{ 'City'|trans }}
+                                {% if "city" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="strata-input" name="city" id="city" value="{{ profile.city }}" {% if "city" in required %} required {% endif %}>
+                        </div>
+                        <div>
+                            <label class="strata-label" for="country">
+                                {{ 'Country'|trans }}
+                                {% if "country" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <select class="strata-select" id="country" name="country" {% if "country" in required %} required {% endif %}>
+                                <option value="">{{ '-- Select Country --'|trans }}</option>
+                                {% for val, label in guest.system_countries %}
+                                    <option value="{{ val }}" label="{{ label|e }}" {% if val == profile.country %}selected="selected"{% endif %}>{{ label|e }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    {# State & Postcode #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="strata-label" for="state">
+                                {{ 'State'|trans }}
+                                {% if "state" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="strata-input" name="state" id="state" value="{{ profile.state }}" {% if "state" in required %} required {% endif %}>
+                        </div>
+                        <div>
+                            <label class="strata-label" for="postcode">
+                                {{ 'Zip/Postal Code'|trans }}
+                                {% if "postcode" in required %}<span class="text-strata-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="strata-input" id="postcode" name="postcode" value="{{ profile.postcode }}" {% if "postcode" in required %} required {% endif %}>
+                        </div>
+                    </div>
+
+                    {# Timezone #}
+                    <div>
+                        <label class="strata-label" for="timezone">{{ 'Timezone'|trans }}</label>
+                        <select class="strata-select" name="timezone" id="timezone" data-timezone-select>
+                            <option value="">{{ '-- Use system default --'|trans }}</option>
+                            {% for region, identifiers in guest.system_timezones %}
+                                <optgroup label="{{ region }}">
+                                    {% for identifier in identifiers %}
+                                        <option value="{{ identifier }}" {% if identifier == profile.timezone %}selected="selected"{% endif %}>{{ identifier }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            {% endfor %}
+                        </select>
+                        <span class="text-xs text-strata-subtle mt-1 block">{{ 'Used to display dates and times in your local time across tickets, invoices, and order history.'|trans }}</span>
+                    </div>
+
+                    {# Custom Fields #}
+                    {% for custom, current in guest.client_custom_fields|default({}) %}
+                        {% if current.active|default(false) %}
+                            <div>
+                                <label class="strata-label" for="{{ custom }}">
+                                    {{ current.title|default('') is not empty ? current.title : custom|capitalize }}
+                                    {% if current.required|default(false) %}<span class="text-strata-danger">*</span>{% endif %}
+                                </label>
+                                <input type="text" class="strata-input" name="{{ custom }}" id="{{ custom }}" value="{{ profile[custom]|default('') }}" {% if current.required|default(false) %} required {% endif %}>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="pt-2">
+                        <button class="strata-btn strata-btn-primary" type="submit">{{ 'Update Profile'|trans }}</button>
+                    </div>
+                </form>
+            </div>
+
+            {# 2. Password Panel #}
+            <div class="p-6 sm:p-8 tab-pane" id="pass-tab-pane" role="tabpanel" tabindex="0" hidden>
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold tracking-tight text-strata-strong">{{ 'Change Password'|trans }}</h2>
+                    <p class="text-sm text-strata-subtle mt-0.5">{{ 'Enter your new password twice to avoid mistakes.'|trans }}</p>
+                </div>
+
+                <form method="post" action="{{ 'profile/change_password'|api_url }}" class="flex flex-col gap-4 max-w-lg" {{ fb_api_form() }}>
+                    <div>
+                        <label class="strata-label" for="current_password">{{ 'Current Password'|trans }} <span class="text-strata-danger">*</span></label>
+                        <input class="strata-input" type="password" name="current_password" id="current_password" required>
+                    </div>
+                    <div>
+                        <label class="strata-label" for="new_password">{{ 'New Password'|trans }} <span class="text-strata-danger">*</span></label>
+                        <input class="strata-input" type="password" name="new_password" id="new_password" required>
+                    </div>
+                    <div>
+                        <label class="strata-label" for="confirm_password">{{ 'Confirm Password'|trans }} <span class="text-strata-danger">*</span></label>
+                        <input class="strata-input" type="password" name="confirm_password" id="confirm_password" required>
+                    </div>
+                    <div class="pt-2">
+                        <button class="strata-btn strata-btn-primary" type="submit">{{ 'Change Password'|trans }}</button>
+                    </div>
+                </form>
+            </div>
+
+            {# 3. API Key Panel #}
+            <div class="p-6 sm:p-8 tab-pane" id="apikey-tab-pane" role="tabpanel" tabindex="0" hidden>
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold tracking-tight text-strata-strong">{{ 'API Key'|trans }}</h2>
+                    <p class="text-sm text-strata-subtle mt-0.5">{{ 'API key allows integration with external applications. You will need this key for authentication.'|trans }}</p>
+                </div>
+
+                <form method="post" action="client/profile/api_key_reset" id="change-api-key" class="flex flex-col gap-4 max-w-lg" {{ fb_api_form({message: 'API Key Changed'|trans}) }}>
+                    {% if client.profile_api_key_get %}
+                        <div class="strata-alert strata-alert-warning" role="alert">
+                            <svg class="size-5 shrink-0" aria-hidden="true"><use href="#warning" /></svg>
+                            <div>
+                                <strong class="font-semibold">{{ 'Warning!'|trans }}</strong>
+                                <span class="block mt-0.5">{{ 'Resetting the key will break existing applications using it!'|trans }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div>
+                        <label for="api-key" class="strata-label">{{ 'Your API Key'|trans }}</label>
+                        <div class="relative">
+                            <input class="strata-input font-mono text-sm bg-strata-recessed pr-10" readonly type="text" value="{{ client.profile_api_key_get }}" id="api-key">
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button class="strata-btn strata-btn-primary" type="submit">
+                            <svg class="size-4" aria-hidden="true"><use href="#key" /></svg>
+                            <span>{{ 'Generate a New Key'|trans }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {# 4. Currency Panel #}
+            <div class="p-6 sm:p-8 tab-pane" id="currency-tab-pane" role="tabpanel" tabindex="0" hidden>
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold tracking-tight text-strata-strong">{{ 'Currency'|trans }}</h2>
+                    <p class="text-sm text-strata-subtle mt-0.5">{{ 'Your profile currency is defined after your first order. Once your currency is set, all your profile accounting will be managed in that currency and cannot be changed.'|trans }}</p>
+                </div>
+
+                <div class="max-w-lg">
+                    {% if profile.currency %}
+                        <div class="p-5 rounded-xl bg-strata-recessed border border-strata-hairline flex flex-col gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-strata-subtle">{{ 'Your profile currency is:'|trans }}</span>
+                                <span class="strata-badge strata-badge-brand font-bold text-sm">{{ profile.currency|currency_name }} ({{ profile.currency }})</span>
+                            </div>
+                            <p class="text-xs text-strata-subtle mt-1">{{ 'You will need to create a new client profile to use an alternative currency.'|trans }}</p>
+                        </div>
+                    {% else %}
+                        <div class="strata-alert strata-alert-info" role="alert">
+                            <svg class="size-5 shrink-0" aria-hidden="true"><use href="#info" /></svg>
+                            <span>{{ 'You do not yet have a currency associated with your profile. You can select the correct one when making your first order.'|trans }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

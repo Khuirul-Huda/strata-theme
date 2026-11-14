@@ -1,0 +1,59 @@
+{% set languages = languages|default(guest.extension_languages(true)) %}
+{% set current_locale = guest.system_locale|default('en_US') %}
+{% set current_lang = {'locale': current_locale, 'title': current_locale} %}
+{% for lang in languages %}
+    {% if lang.locale == current_locale %}
+        {% set current_lang = lang %}
+    {% endif %}
+{% endfor %}
+{% set current_parts = current_locale|split('_') %}
+{% set current_country = current_parts|length > 1 ? current_parts[1]|lower : current_parts[0]|lower %}
+{% set compact_label = current_parts[0]|upper %}
+
+<details class="relative group" data-dropdown data-locale-switcher>
+    <summary class="list-none cursor-pointer inline-flex items-center gap-2 h-9 px-2.5 rounded-lg bg-strata-base border border-strata-hairline hover:border-strata-line hover:bg-strata-fill-hover text-xs sm:text-sm font-medium text-strata-default hover:text-strata-strong transition-colors select-none"
+             aria-label="{{ 'Language'|trans }}: {{ current_lang.title }}"
+             title="{{ 'Language'|trans }}: {{ current_lang.title }}">
+        <svg class="size-4 text-strata-subtle shrink-0" aria-hidden="true"><use href="#globe" /></svg>
+        {% if current_country|length == 2 %}
+            <span class="fi fi-{{ current_country }} rounded-[2px] shrink-0" aria-hidden="true"></span>
+        {% endif %}
+        <span class="hidden sm:inline strata-tabular">{{ compact_label }}</span>
+        <svg class="size-3.5 text-strata-subtle transition-transform duration-150 group-open:rotate-180 shrink-0" aria-hidden="true"><use href="#chevron-down" /></svg>
+    </summary>
+
+    <div class="strata-dropdown-panel absolute right-0 mt-2 w-60 rounded-xl bg-strata-overlay border border-strata-line shadow-xl p-1.5 z-50" role="menu" aria-label="{{ 'Available languages'|trans }}">
+        <div class="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-strata-subtle">
+            {{ 'Language'|trans }}
+        </div>
+        <div class="space-y-0.5 max-h-64 overflow-y-auto">
+            {% for lang in languages %}
+                {% set lang_parts = lang.locale|split('_') %}
+                {% set lang_country = lang_parts|length > 1 ? lang_parts[1]|lower : lang_parts[0]|lower %}
+                {% set is_current = lang.locale == current_locale %}
+                <button type="button"
+                        data-locale-option="{{ lang.locale }}"
+                        role="menuitemradio"
+                        aria-checked="{{ is_current ? 'true' : 'false' }}"
+                        class="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm transition-colors cursor-pointer {% if is_current %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-default hover:bg-strata-fill-hover hover:text-strata-strong{% endif %}">
+                    <span class="flex items-center gap-2.5 min-w-0">
+                        {% if lang_country|length == 2 %}
+                            <span class="fi fi-{{ lang_country }} rounded-[2px] shrink-0" aria-hidden="true"></span>
+                        {% else %}
+                            <svg class="size-4 text-strata-subtle shrink-0" aria-hidden="true"><use href="#globe" /></svg>
+                        {% endif %}
+                        <span class="truncate">{{ lang.title }}</span>
+                    </span>
+                    {% if is_current %}
+                        <svg class="size-4 text-strata-brand shrink-0" aria-hidden="true"><use href="#check" /></svg>
+                    {% endif %}
+                </button>
+            {% endfor %}
+        </div>
+        {% if languages|length <= 1 %}
+            <div class="mt-1 pt-1.5 px-2.5 pb-1 border-t border-strata-hairline text-[11px] text-strata-subtle">
+                {{ 'Active system language'|trans }}
+            </div>
+        {% endif %}
+    </div>
+</details>

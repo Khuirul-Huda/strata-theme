@@ -1,0 +1,27 @@
+{
+  "name": "fossbilling-theme-strata-client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run build.ts --watch",
+    "build": "bun run build.ts",
+    "build:icons": "bun run build.ts --icons-only",
+    "check:types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/kumo": "latest",
+    "@phosphor-icons/core": "latest",
+    "flag-icons": "latest",
+    "intl-tel-input": "latest",
+    "motion": "latest",
+    "tom-select": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "latest",
+    "@types/node": "latest",
+    "bun-types": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
+  }
+}

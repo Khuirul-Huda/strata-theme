@@ -1,0 +1,83 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'kb' %}
+
+{% block meta_title %}{{ category.title }}{% endblock %}
+{% block meta_description %}{{ category.description|default('Browse support articles in this knowledge base category.'|trans) }}{% endblock %}
+
+{% block body_class %}kb-category{% endblock %}
+{% block breadcrumb %}
+    <li class="breadcrumb-item">
+        <a class="hover:text-strata-strong transition-colors" href="{{ 'support/kb'|url }}">{{ 'Knowledge Base'|trans }}</a>
+    </li>
+    <li class="active breadcrumb-item text-strata-strong font-medium truncate max-w-xs" aria-current="page">{{ category.title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6" data-animate="fade-up">
+    {# Category Header Card #}
+    <div class="strata-card">
+        <div class="strata-card-header flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-4">
+                <div class="size-11 rounded-xl bg-strata-brand/10 text-strata-brand flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="size-6" aria-hidden="true"><use href="#book" /></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-strata-strong">{{ category.title }}</h1>
+                    {% if category.description %}
+                        <p class="text-sm text-strata-subtle mt-1">{{ category.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <span class="strata-badge strata-badge-neutral strata-tabular shrink-0">
+                {{ category.articles|length }} {{ 'articles'|trans }}
+            </span>
+        </div>
+
+        {# Article List #}
+        <div class="p-0">
+            {% if category.articles %}
+                <div class="divide-y divide-strata-hairline" data-stagger>
+                    {% for i, article in category.articles %}
+                        <a data-stagger-item
+                           class="flex items-center justify-between p-4 sm:px-6 hover:bg-strata-tint transition-colors group"
+                           href='{{ "support/kb/#{article.category.slug}/#{article.slug}"|url }}'>
+                            <div class="flex items-center gap-3.5 min-w-0">
+                                <span class="size-8 rounded-lg bg-strata-fill text-strata-subtle group-hover:text-strata-brand group-hover:bg-strata-brand/10 flex items-center justify-center shrink-0 transition-colors">
+                                    <svg class="size-4" aria-hidden="true"><use href="#file-text" /></svg>
+                                </span>
+                                <span class="font-medium text-sm text-strata-strong group-hover:text-strata-brand transition-colors truncate">
+                                    {{ article.title }}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="text-xs text-strata-subtle group-hover:text-strata-brand transition-colors hidden sm:inline">{{ 'Read Article'|trans }}</span>
+                                <svg class="size-4 text-strata-subtle group-hover:text-strata-strong transition-colors" aria-hidden="true"><use href="#chevron-right" /></svg>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="py-12 px-4 flex flex-col items-center justify-center text-center">
+                    <div class="inline-flex items-center justify-center size-12 rounded-xl bg-strata-fill text-strata-subtle mb-3">
+                        <svg class="size-6" aria-hidden="true"><use href="#file-text" /></svg>
+                    </div>
+                    <h3 class="text-base font-semibold text-strata-strong">{{ 'No articles yet'|trans }}</h3>
+                    <p class="text-sm text-strata-subtle mt-1 mb-4">{{ 'No articles have been published in this category yet.'|trans }}</p>
+                    <a class="strata-btn strata-btn-secondary strata-btn-sm" href="{{ 'support/kb'|url }}">
+                        <svg class="size-4" aria-hidden="true"><use href="#arrow-left" /></svg>
+                        <span>{{ 'Back to Knowledge Base'|trans }}</span>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Back link #}
+    <div>
+        <a href="{{ 'support/kb'|url }}" class="inline-flex items-center gap-2 text-sm font-medium text-strata-subtle hover:text-strata-strong transition-colors">
+            <svg class="size-4" aria-hidden="true"><use href="#arrow-left" /></svg>
+            <span>{{ 'Back to all categories'|trans }}</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

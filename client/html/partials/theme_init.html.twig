@@ -1,0 +1,29 @@
+{# Synchronous FOUC-prevention script. Resolves mode, motion intensity,
+   accent color, and desktop sidebar collapse state before paint. #}
+<script>
+    (() => {
+        const root = document.documentElement;
+        const defaultMode = {{ settings.theme|default('light')|json_encode|raw }};
+        const defaultMotion = {{ settings.motion_intensity|default('full')|json_encode|raw }};
+        const defaultAccent = {{ settings.accent_color|default('orange')|json_encode|raw }};
+        const sidebarCollapsible = {{ (settings.sidebar_collapsible|default('1') in ['1', 1, true, 'true', 'on']) ? 'true' : 'false' }};
+
+        root.setAttribute('data-theme', 'strata');
+        root.setAttribute('data-motion', ['full', 'subtle', 'off'].includes(defaultMotion) ? defaultMotion : 'full');
+        root.setAttribute('data-accent', ['orange', 'blue', 'emerald', 'violet'].includes(defaultAccent) ? defaultAccent : 'orange');
+
+        let activeMode = defaultMode === 'dark' ? 'dark' : 'light';
+        try {
+            const stored = localStorage.getItem('theme');
+            if (stored === 'light' || stored === 'dark') {
+                activeMode = stored;
+            }
+            if (sidebarCollapsible && localStorage.getItem('strata-sidebar-collapsed') === 'true') {
+                root.setAttribute('data-sidebar-collapsed', 'true');
+            }
+        } catch (_) { /* localStorage unavailable - use server defaults */ }
+
+        root.setAttribute('data-mode', activeMode);
+        root.setAttribute('data-bs-theme', activeMode);
+    })();
+</script>

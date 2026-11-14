@@ -1,0 +1,281 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'support' %}
+
+{% import "macro_functions.html.twig" as mf %}
+{% set is_guest_ticket = ticket.author.role|default('') == 'guest' %}
+{% set can_reply = ticket.status != 'closed' or (not is_guest_ticket and ticket.helpdesk.can_reopen) %}
+
+{% block meta_title %}{{ ticket.subject }}{% endblock %}
+
+{% block head %}
+    {{ 'css/markdown.css' | public_asset_url | stylesheet_tag }}
+    {{ wysiwyg('.editor-textarea') }}
+{% endblock %}
+
+{% block body_class %}support-ticket{% endblock %}
+{% block breadcrumb %}
+    {% if is_guest_ticket %}
+        <li class="breadcrumb-item"><a class="hover:text-strata-strong transition-colors" href="{{ 'support/contact-us'|url }}">{{ 'Contact Us'|trans }}</a></li>
+    {% else %}
+        <li class="breadcrumb-item"><a class="hover:text-strata-strong transition-colors" href="{{ 'support'|url }}">{{ 'Support Tickets'|trans }}</a></li>
+    {% endif %}
+    <li class="active breadcrumb-item text-strata-strong font-medium truncate max-w-xs sm:max-w-md" aria-current="page">{{ ticket.subject }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6" data-animate="fade-up">
+    {# Ticket Overview Card #}
+    <div class="strata-card">
+        <div class="strata-card-header flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-strata-fill text-strata-subtle strata-tabular">#{{ ticket.id }}</span>
+                    {{ mf.status_badge(ticket.status, 'ticket') }}
+                </div>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-strata-strong break-words">{{ ticket.subject }}</h1>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                {% if can_reply %}
+                    <a href="#reply-to" class="strata-btn strata-btn-primary strata-btn-sm" id="reply-to-btn">
+                        <svg class="size-4" aria-hidden="true"><use href="#pencil" /></svg>
+                        <span>{{ 'Reply'|trans }}</span>
+                    </a>
+                {% endif %}
+                {% if ticket.status != 'closed' %}
+                    <button type="button"
+                            class="strata-btn strata-btn-secondary strata-btn-sm text-strata-danger hover:bg-strata-danger-tint border-strata-line hover:border-strata-danger/30 cursor-pointer"
+                            id="ticket-close"
+                            title="{{ 'Close Ticket'|trans }}">
+                        <svg class="size-4" aria-hidden="true"><use href="#lock" /></svg>
+                        <span>{{ 'Close Ticket'|trans }}</span>
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="strata-card-body">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div class="p-3 rounded-lg bg-strata-recessed border border-strata-hairline">
+                    <span class="text-xs text-strata-subtle block mb-1">{{ 'Help Desk'|trans }}</span>
+                    <span class="font-medium text-strata-strong flex items-center gap-1.5">
+                        <svg class="size-4 text-strata-brand shrink-0" aria-hidden="true"><use href="#lifebuoy" /></svg>
+                        <span>{{ ticket.helpdesk.name }}</span>
+                    </span>
+                </div>
+
+                <div class="p-3 rounded-lg bg-strata-recessed border border-strata-hairline">
+                    <span class="text-xs text-strata-subtle block mb-1">{{ 'Status'|trans }}</span>
+                    <div>{{ mf.status_badge(ticket.status, 'ticket') }}</div>
+                </div>
+
+                <div class="p-3 rounded-lg bg-strata-recessed border border-strata-hairline">
+                    <span class="text-xs text-strata-subtle block mb-1">{{ 'Time Opened'|trans }}</span>
+                    <span class="font-medium text-strata-strong strata-tabular flex items-center gap-1.5">
+                        <svg class="size-4 text-strata-subtle shrink-0" aria-hidden="true"><use href="#calendar" /></svg>
+                        <span>{{ ticket.created_at|format_date }}</span>
+                    </span>
+                </div>
+
+                {% if ticket.rel_type|default('') == 'order' and ticket.rel_id %}
+                    <div class="p-3 rounded-lg bg-strata-recessed border border-strata-hairline">
+                        <span class="text-xs text-strata-subtle block mb-1">{{ 'Related To'|trans }}</span>
+                        <a href='{{ "order/service/manage/#{ticket.rel_id}"|url }}' class="font-medium text-strata-brand hover:underline flex items-center gap-1.5 truncate">
+                            <svg class="size-4 text-strata-brand shrink-0" aria-hidden="true"><use href="#package" /></svg>
+                            <span>{{ 'Service #'|trans }} {{ ticket.rel_id }}</span>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="p-3 rounded-lg bg-strata-recessed border border-strata-hairline">
+                        <span class="text-xs text-strata-subtle block mb-1">{{ 'Total Messages'|trans }}</span>
+                        <span class="font-medium text-strata-strong strata-tabular flex items-center gap-1.5">
+                            <svg class="size-4 text-strata-subtle shrink-0" aria-hidden="true"><use href="#mail" /></svg>
+                            <span>{{ ticket.messages|length }}</span>
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Conversation Thread #}
+    <div class="flex flex-col gap-4" data-stagger>
+        {% for i, message in ticket.messages %}
+            {% set is_staff = message.author.role|default('') == 'admin' %}
+            <div data-stagger-item
+                 class="rounded-xl bg-strata-base shadow-xs overflow-hidden {% if is_staff %}border-2 border-strata-brand/40 ring-1 ring-strata-brand/20{% else %}border border-strata-hairline{% endif %}">
+                <div class="px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 {% if is_staff %}bg-strata-brand/5 border-b border-strata-brand/20{% else %}bg-strata-recessed/60 border-b border-strata-hairline{% endif %}">
+                    <div class="flex items-center gap-3 min-w-0">
+                        {{ avatar(message.author.email|default(''), 40, 'size-10 rounded-full border border-strata-line shrink-0 object-cover', null, 'div') }}
+                        <div class="flex flex-col min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-sm text-strata-strong truncate">{{ message.author.name }}</span>
+                                {% if is_staff %}
+                                    <span class="strata-badge strata-badge-brand text-xs">
+                                        <svg class="size-3" aria-hidden="true"><use href="#shield-check" /></svg>
+                                        <span>{{ 'Operator'|trans }}</span>
+                                    </span>
+                                {% else %}
+                                    <span class="strata-badge strata-badge-neutral text-xs">
+                                        <span>{{ 'You'|trans }}</span>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <span class="text-xs text-strata-subtle strata-tabular">{{ 'on :date'|trans({':date': message.created_at|format_date}) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-strata-subtle strata-tabular">#{{ message.id }}</span>
+                        {% if can_reply %}
+                            <button type="button"
+                                    class="strata-btn strata-btn-ghost strata-btn-sm btn-quote-reply text-strata-subtle hover:text-strata-strong"
+                                    message-quote="{{ mf.markdown_quote(message.content) }}"
+                                    data-tooltip="{{ 'Quote Reply'|trans }}"
+                                    aria-label="{{ 'Quote Reply'|trans }}">
+                                <svg class="size-4" aria-hidden="true"><use href="#quote" /></svg>
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="p-5 sm:p-6">
+                    <article class="markdown-body bg-transparent text-reset" id="message-{{ message.id }}">
+                        {{ (message.content ?? '')|markdown_to_html }}
+                    </article>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# Reply Section #}
+    <div class="mt-2">
+        {% if not can_reply %}
+            <div class="strata-alert strata-alert-info flex items-center justify-center text-center p-4">
+                <svg class="size-5 shrink-0" aria-hidden="true"><use href="#lock" /></svg>
+                <span>{{ 'Ticket was closed and cannot be reopened.'|trans }}</span>
+            </div>
+        {% else %}
+            {% if ticket.status == 'closed' %}
+                <div class="strata-alert strata-alert-warning mb-4 flex items-center gap-3 p-4">
+                    <svg class="size-5 shrink-0" aria-hidden="true"><use href="#info" /></svg>
+                    <span>{{ 'This ticket was closed, but you can still reopen it by replying.'|trans }}</span>
+                </div>
+            {% endif %}
+
+            <div class="strata-card" id="reply-to">
+                <div class="strata-card-header">
+                    <h2 class="text-base font-semibold text-strata-strong flex items-center gap-2">
+                        <svg class="size-4 text-strata-brand" aria-hidden="true"><use href="#pencil" /></svg>
+                        <span>{{ 'Reply to Ticket'|trans }}</span>
+                    </h2>
+                </div>
+                <div class="strata-card-body">
+                    <form id="ticket-reply-form" class="flex flex-col gap-4">
+                        {% if is_guest_ticket %}
+                            <input type="hidden" name="hash" value="{{ ticket.hash }}">
+                        {% else %}
+                            <input type="hidden" name="id" value="{{ ticket.id }}">
+                        {% endif %}
+
+                        <div>
+                            <label for="ticket-reply-text" class="sr-only">{{ 'Message'|trans }}</label>
+                            <textarea name="content" cols="5" rows="8" class="editor-textarea strata-textarea w-full" required="required"
+                                      id="ticket-reply-text" placeholder="{{ 'Write your reply...'|trans }}"></textarea>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                            <span class="text-xs text-strata-subtle">{{ 'Supports Markdown formatting'|trans }}</span>
+                            <button class="strata-btn strata-btn-primary" type="submit" id="post-reply-btn" value="{{ 'Post'|trans }}">
+                                <svg class="size-4" aria-hidden="true"><use href="#pencil" /></svg>
+                                <span>{{ 'Post Reply'|trans }}</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const ticketReplyForm = document.getElementById('ticket-reply-form');
+        const closeTicketBtn = document.getElementById('ticket-close');
+        const postReplyBtn = document.getElementById('post-reply-btn');
+        const replyToMessageBtn = document.querySelectorAll('.btn-quote-reply');
+        const ticketReplyTextArea = document.getElementById('ticket-reply-text');
+        const supportApi = FOSSBilling.api.{{ is_guest_ticket ? 'guest' : 'client' }};
+
+        ticketReplyForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            supportApi.post('support/ticket_reply', FOSSBilling.tools.serializeFormDataToObject(new FormData(ticketReplyForm)),
+                () => {
+                    flashMessage({
+                        message: 'Posted reply',
+                        reload: true
+                    });
+                },
+                (res) => FOSSBilling.message(`${res.message} (${res.code})`, 'error')
+            );
+        });
+
+        closeTicketBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleLoader();
+            supportApi.post('support/ticket_close', FOSSBilling.tools.serializeFormDataToObject(new FormData(ticketReplyForm)),
+                () => {
+                    flashMessage({
+                        message: 'Closed ticket #{{ ticket.id }}',
+                        reload: true
+                    });
+                },
+                (res) => FOSSBilling.message(`${res.message} (${res.code})`, 'error')
+            );
+        });
+
+        postReplyBtn?.addEventListener('click', () => {
+            if (document.getElementById('ticket-reply-text')?.value.length > 0) {
+                toggleLoader();
+            }
+        });
+
+        replyToMessageBtn.forEach((reply) => {
+            reply.addEventListener('click', (e) => {
+                e.preventDefault();
+                let quote = e.currentTarget.getAttribute('message-quote') || '';
+                quote = quote.replace(/^\s*$(?:\r\n?|\n)/gm, '');
+                if (ticketReplyTextArea && ticketReplyTextArea.editor) {
+                    ticketReplyTextArea.editor.setData(quote);
+                    ticketReplyTextArea.editor.focus();
+                } else if (ticketReplyTextArea) {
+                    ticketReplyTextArea.value = quote;
+                    ticketReplyTextArea.focus();
+                }
+            });
+        });
+
+        document.getElementById('reply-to-btn')?.addEventListener('click', () => {
+            if (ticketReplyTextArea && ticketReplyTextArea.editor) {
+                ticketReplyTextArea.editor.focus();
+            } else if (ticketReplyTextArea) {
+                ticketReplyTextArea.focus();
+            }
+        });
+
+        const toggleLoader = () => {
+            let loader = document.querySelector('.wait');
+            if (!loader) {
+                return;
+            }
+            if (loader.style.display === 'none') {
+                loader.style.display = 'block';
+            } else {
+                loader.style.display = 'none';
+            }
+        };
+    });
+</script>
+{% endblock %}

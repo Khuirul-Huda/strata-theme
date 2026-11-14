@@ -1,0 +1,633 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'services' %}
+
+{% import "macro_functions.html.twig" as mf %}
+
+{% block meta_title %}{{ order.title }}{% endblock %}
+
+{% set addons = client.order_addons({ "id": order.id }) %}
+{% set upgradables = client.order_upgradables({ 'id': order.id }) %}
+{% set service_partial = "mod_service" ~ order.service_type ~ "_manage.html.twig" %}
+{% set service = (order.status == 'active' and guest.system_template_exists({ 'file': service_partial })) ? client.order_service({ 'id': order.id }) : null %}
+{% set order_invoices = client.invoice_get_list({ "order_id": order.id, "per_page": 20 }) %}
+
+{% block body_class %}order-manage{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{{ 'order/service'|url }}" class="hover:text-strata-strong transition-colors">{{ 'Services'|trans }}</a></li>
+    <li class="breadcrumb-item active text-strata-strong font-medium" aria-current="page">{{ order.title }}</li>
+{% endblock %}
+
+{% block head %}
+    {{ wysiwyg('.editor-textarea') }}
+{% endblock %}
+
+{% block content %}
+{{ render_widgets('client.order.manage.content.start', { 'order': order }) }}
+
+<div class="space-y-6" data-animate="fade-up">
+    {# Service Detail Header Card #}
+    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-start gap-4">
+                <div class="size-12 rounded-xl bg-strata-fill flex items-center justify-center text-strata-brand shrink-0">
+                    <svg class="size-6" aria-hidden="true"><use href="#package" /></svg>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <h1 class="text-2xl font-bold tracking-tight text-strata-strong">{{ order.title }}</h1>
+                        {{ mf.status_badge(order.status, 'order') }}
+                    </div>
+                    <p class="text-xs text-strata-subtle mt-1">
+                        <span class="font-medium text-strata-default">{{ 'Order'|trans }}:</span> <span class="strata-tabular">#{{ order.id }}</span>
+                        {% if order.created_at %}
+                            <span class="mx-1.5 text-strata-inactive">&bull;</span>
+                            <span>{{ 'Created on %date%'|trans({'%date%': order.created_at|format_date}) }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {# Action Buttons #}
+            <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
+                {% if order.period and order.status != 'failed_renew' %}
+                    <a class="strata-btn strata-btn-primary strata-btn-sm inline-flex items-center gap-1.5"
+                       {{ fb_api_link({href: 'invoice/renewal_invoice'|api_url(query: {order_id: order.id}), modal: {type: 'confirm', title: 'Are you sure?'|trans, content: 'This will generate new invoice. Are you sure you want to continue?'|trans}, callback: 'onRenewalInvoiceCreated'}) }}>
+                        <svg class="size-3.5" aria-hidden="true"><use href="#receipt" /></svg>
+                        <span>{{ 'Renew Now'|trans }}</span>
+                    </a>
+                    <script>window.onRenewalInvoiceCreated = (hash) => { window.location = "{{ 'invoice'|url }}/" + hash; };</script>
+                {% endif %}
+
+                {% if upgradables %}
+                    <button class="strata-btn strata-btn-secondary strata-btn-sm inline-flex items-center gap-1.5" type="button" id="request-upgrade" data-bs-toggle="modal" data-bs-target="#upgrade-request-modal">
+                        <svg class="size-3.5 text-strata-brand" aria-hidden="true"><use href="#sparkles" /></svg>
+                        <span>{{ 'Request Upgrade'|trans }}</span>
+                    </button>
+                {% endif %}
+
+                <button class="strata-btn strata-btn-secondary strata-btn-sm inline-flex items-center gap-1.5" type="button" id="open-ticket" data-bs-toggle="modal" data-bs-target="#open-ticket-modal">
+                    <svg class="size-3.5 text-strata-subtle" aria-hidden="true"><use href="#ticket" /></svg>
+                    <span>{{ 'Open Ticket'|trans }}</span>
+                </button>
+
+                {% if order.status == 'active' %}
+                    <button class="strata-btn strata-btn-danger strata-btn-sm inline-flex items-center gap-1.5" type="button" id="request-cancel" data-bs-toggle="modal" data-bs-target="#cancel-request-modal">
+                        <svg class="size-3.5" aria-hidden="true"><use href="#trash" /></svg>
+                        <span>{{ 'Request Cancellation'|trans }}</span>
+                    </button>
+                {% endif %}
+
+                {{ render_widgets('client.order.manage.actions.end', { 'order': order }) }}
+            </div>
+        </div>
+
+        {# Metrics Grid #}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-strata-hairline">
+            <div class="rounded-xl bg-strata-recessed p-3.5">
+                <span class="block text-xs font-medium text-strata-subtle uppercase tracking-wider mb-1">{{ 'Payment Amount'|trans }}</span>
+                <span class="text-base font-bold text-strata-strong strata-tabular">{{ order.total|format_currency(order.currency ?? default_currency) }}</span>
+            </div>
+
+            <div class="rounded-xl bg-strata-recessed p-3.5">
+                <span class="block text-xs font-medium text-strata-subtle uppercase tracking-wider mb-1">{{ 'Billing Cycle'|trans }}</span>
+                <span class="text-base font-semibold text-strata-strong">{{ order.period ? order.period|period_title : 'One-time'|trans }}</span>
+            </div>
+
+            <div class="rounded-xl bg-strata-recessed p-3.5">
+                <span class="block text-xs font-medium text-strata-subtle uppercase tracking-wider mb-1">{{ 'Next Due Date'|trans }}</span>
+                <span class="text-base font-semibold text-strata-strong strata-tabular">
+                    {% if order.expires_at %}
+                        {{ order.expires_at|format_date }}
+                    {% else %}
+                        <span class="text-strata-inactive">-</span>
+                    {% endif %}
+                </span>
+                {% if order.expires_at and order.period %}
+                    <span class="block text-xs text-strata-subtle mt-0.5">({{ 'in %days% days'|trans({'%days%': order.expires_at|daysleft}) }})</span>
+                {% endif %}
+            </div>
+
+            <div class="rounded-xl bg-strata-recessed p-3.5">
+                <span class="block text-xs font-medium text-strata-subtle uppercase tracking-wider mb-1">{{ 'Activated At'|trans }}</span>
+                <span class="text-base font-semibold text-strata-strong strata-tabular">
+                    {% if order.activated_at %}
+                        {{ order.activated_at|format_date }}
+                    {% else %}
+                        <span class="text-strata-inactive">-</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {# Tab Navigation (Details, Management, Addons, Invoices) #}
+    <nav data-tab-list class="relative flex items-center border-b border-strata-hairline gap-1 overflow-x-auto" role="tablist">
+        <button type="button" role="tab" aria-selected="true" class="strata-nav-link active font-medium text-sm px-4 py-2.5 rounded-lg transition-colors cursor-pointer" data-strata-tab="#tab-details">
+            <svg class="size-4" aria-hidden="true"><use href="#file-text" /></svg>
+            <span>{{ 'Details'|trans }}</span>
+        </button>
+
+        {% if order.status == 'active' and guest.system_template_exists({ 'file': service_partial }) %}
+            <button type="button" role="tab" aria-selected="false" class="strata-nav-link font-medium text-sm px-4 py-2.5 rounded-lg transition-colors cursor-pointer" data-strata-tab="#tab-management">
+                <svg class="size-4" aria-hidden="true"><use href="#settings" /></svg>
+                <span>{{ 'Management'|trans }}</span>
+            </button>
+        {% endif %}
+
+        {% if order.group_master == 1 and addons|length > 0 %}
+            <button type="button" role="tab" aria-selected="false" class="strata-nav-link font-medium text-sm px-4 py-2.5 rounded-lg transition-colors cursor-pointer" data-strata-tab="#tab-addons">
+                <svg class="size-4" aria-hidden="true"><use href="#sparkles" /></svg>
+                <span>{{ 'Addons'|trans }}</span>
+                <span class="inline-flex items-center justify-center rounded-full bg-strata-brand/10 text-strata-brand px-1.5 py-0.2 text-xs font-semibold strata-tabular">{{ addons|length }}</span>
+            </button>
+        {% endif %}
+
+        <button type="button" role="tab" aria-selected="false" class="strata-nav-link font-medium text-sm px-4 py-2.5 rounded-lg transition-colors cursor-pointer" data-strata-tab="#tab-invoices">
+            <svg class="size-4" aria-hidden="true"><use href="#receipt" /></svg>
+            <span>{{ 'Invoices'|trans }}</span>
+            {% if order_invoices.list|length > 0 %}
+                <span class="inline-flex items-center justify-center rounded-full bg-strata-fill text-strata-subtle px-1.5 py-0.2 text-xs font-semibold strata-tabular">{{ order_invoices.list|length }}</span>
+            {% endif %}
+        </button>
+
+        <span data-nav-indicator class="strata-nav-pill"></span>
+    </nav>
+
+    {# Tab Content Panels #}
+    <div id="order-manage-tab-panels" class="space-y-6">
+        {# Tab 1: Service Details #}
+        <div id="tab-details" role="tabpanel" class="tab-pane active show space-y-6">
+            <div class="rounded-2xl bg-strata-base border border-strata-hairline overflow-hidden shadow-xs">
+                <div class="px-6 py-4 border-b border-strata-hairline bg-strata-tint flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-strata-strong">{{ 'Service Information'|trans }}</h2>
+                    <span class="text-xs text-strata-subtle">{{ 'Full overview of your plan and contract'|trans }}</span>
+                </div>
+                <div class="divide-y divide-strata-hairline text-sm">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                        <span class="font-medium text-strata-subtle">{{ 'Order ID'|trans }}</span>
+                        <span class="sm:col-span-2 font-medium text-strata-strong strata-tabular">#{{ order.id }}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                        <span class="font-medium text-strata-subtle">{{ 'Product / Plan'|trans }}</span>
+                        <span class="sm:col-span-2 font-semibold text-strata-strong">{{ order.title }}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                        <span class="font-medium text-strata-subtle">{{ 'Payment Amount'|trans }}</span>
+                        <span class="sm:col-span-2 font-semibold text-strata-strong strata-tabular">{{ order.total|format_currency(order.currency ?? default_currency) }}</span>
+                    </div>
+
+                    {% if order.discount and order.discount > 0 %}
+                        <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                            <span class="font-medium text-strata-subtle">{{ 'Order Discount'|trans }}</span>
+                            <span class="sm:col-span-2 font-medium text-strata-success strata-tabular">-{{ order.discount|format_currency(order.currency ?? default_currency) }}</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                            <span class="font-medium text-strata-subtle">{{ 'Amount After Discount'|trans }}</span>
+                            <span class="sm:col-span-2 font-semibold text-strata-strong strata-tabular">{{ (order.total - order.discount)|format_currency(order.currency ?? default_currency) }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.period %}
+                        <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                            <span class="font-medium text-strata-subtle">{{ 'Billing Cycle'|trans }}</span>
+                            <span class="sm:col-span-2 text-strata-default">{{ order.period|period_title }}</span>
+                        </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                        <span class="font-medium text-strata-subtle">{{ 'Order Status'|trans }}</span>
+                        <span class="sm:col-span-2">{{ mf.status_badge(order.status, 'order') }}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                        <span class="font-medium text-strata-subtle">{{ 'Order Created'|trans }}</span>
+                        <span class="sm:col-span-2 text-strata-default strata-tabular">{{ order.created_at|format_date }}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                        <span class="font-medium text-strata-subtle">{{ 'Activated At'|trans }}</span>
+                        <span class="sm:col-span-2 text-strata-default strata-tabular">{{ order.activated_at ? order.activated_at|format_date : '-' }}</span>
+                    </div>
+
+                    {% if order.period %}
+                        <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                            <span class="font-medium text-strata-subtle">{{ 'Renewal Date'|trans }}</span>
+                            <span class="sm:col-span-2 text-strata-default strata-tabular">
+                                {% if order.expires_at %}
+                                    {{ order.expires_at|format_date }}
+                                    <span class="text-xs text-strata-subtle ml-1">({{ 'in %days% days'|trans({'%days%': order.expires_at|daysleft}) }})</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.notes %}
+                        <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                            <span class="font-medium text-strata-subtle">{{ 'Order Notes'|trans }}</span>
+                            <div class="sm:col-span-2 text-strata-default prose text-sm max-w-none">{{ (order.notes ?? '')|markdown_to_html }}</div>
+                        </div>
+                    {% endif %}
+
+                    {% if order.active_tickets > 0 %}
+                        <div class="grid grid-cols-1 sm:grid-cols-3 px-6 py-3.5 hover:bg-strata-elevated transition-colors">
+                            <span class="font-medium text-strata-subtle">{{ 'Active Support Tickets'|trans }}</span>
+                            <span class="sm:col-span-2">
+                                <a href="{{ 'support'|url }}" class="inline-flex items-center gap-1.5 rounded-full bg-strata-danger-tint px-2.5 py-0.5 text-xs font-semibold text-strata-danger hover:underline strata-tabular">
+                                    <svg class="size-3.5" aria-hidden="true"><use href="#ticket" /></svg>
+                                    <span>{{ order.active_tickets }} {{ 'Active Ticket(s)'|trans }}</span>
+                                </a>
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {{ render_widgets('client.order.manage.details.after', { 'order': order }) }}
+        </div>
+
+        {# Tab 2: Service Management (Included Module Template) #}
+        {% if order.status == 'active' and guest.system_template_exists({ 'file': service_partial }) %}
+            <div id="tab-management" role="tabpanel" class="tab-pane hidden space-y-6">
+                {{ render_widgets('client.order.manage.service.before', { 'order': order, 'service': service }) }}
+                {% if service %}
+                    <div class="service-management-partial">
+                        {{ include(service_partial, { 'order': order, 'service': service }) }}
+                    </div>
+                {% else %}
+                    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-8 text-center text-strata-subtle">
+                        {{ 'This order has no active service to manage.'|trans }}
+                    </div>
+                {% endif %}
+                {{ render_widgets('client.order.manage.service.after', { 'order': order, 'service': service }) }}
+            </div>
+        {% endif %}
+
+        {# Tab 3: Order Addons #}
+        {% if order.group_master == 1 and addons|length > 0 %}
+            <div id="tab-addons" role="tabpanel" class="tab-pane hidden space-y-6">
+                <div class="rounded-2xl bg-strata-base border border-strata-hairline overflow-hidden shadow-xs">
+                    <div class="px-6 py-4 border-b border-strata-hairline bg-strata-tint flex items-center justify-between">
+                        <h2 class="text-base font-semibold text-strata-strong">{{ 'Addons & Extra Services'|trans }}</h2>
+                        <span class="text-xs text-strata-subtle">{{ 'Addons ordered with this service'|trans }}</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-strata-default">
+                            <thead>
+                                <tr class="bg-strata-recessed border-b border-strata-line text-left text-xs font-semibold text-strata-subtle">
+                                    <th class="py-3 px-4">{{ 'Product / Service'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Price'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Billing Cycle'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Next Due Date'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Status'|trans }}</th>
+                                    <th class="py-3 px-4 text-right">{{ 'Actions'|trans }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-strata-hairline">
+                                {% for addon in addons %}
+                                    <tr class="hover:bg-strata-elevated transition-colors">
+                                        <td class="py-3.5 px-4 font-medium text-strata-strong">
+                                            <a href="{{ 'order/service/manage/' ~ addon.id|url }}" class="hover:text-strata-brand transition-colors">
+                                                {{ addon.title }}
+                                            </a>
+                                        </td>
+                                        <td class="py-3.5 px-4 font-semibold text-strata-strong strata-tabular whitespace-nowrap">
+                                            {{ addon.total|format_currency(addon.currency ?? default_currency) }}
+                                        </td>
+                                        <td class="py-3.5 px-4 text-strata-subtle whitespace-nowrap">
+                                            {{ addon.period ? addon.period|period_title : '-' }}
+                                        </td>
+                                        <td class="py-3.5 px-4 text-strata-subtle whitespace-nowrap">
+                                            {% if addon.expires_at %}
+                                                <span class="strata-tabular">{{ addon.expires_at|format_date }}</span>
+                                            {% else %}
+                                                <span class="text-strata-inactive">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-3.5 px-4 whitespace-nowrap">
+                                            {{ mf.status_badge(addon.status, 'order') }}
+                                        </td>
+                                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                            <a class="strata-btn strata-btn-secondary strata-btn-sm inline-flex items-center gap-1"
+                                               href="{{ 'order/service/manage/' ~ addon.id|url }}">
+                                                <span>{{ 'Manage'|trans }}</span>
+                                                <svg class="size-3 text-strata-subtle" aria-hidden="true"><use href="#chevron-right" /></svg>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Tab 4: Invoices #}
+        <div id="tab-invoices" role="tabpanel" class="tab-pane hidden space-y-6">
+            <div class="rounded-2xl bg-strata-base border border-strata-hairline overflow-hidden shadow-xs">
+                <div class="px-6 py-4 border-b border-strata-hairline bg-strata-tint flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-strata-strong">{{ 'Related Invoices'|trans }}</h2>
+                    <span class="text-xs text-strata-subtle">{{ 'All billing history for this service'|trans }}</span>
+                </div>
+
+                {% if order_invoices.list|length > 0 %}
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-strata-default">
+                            <thead>
+                                <tr class="bg-strata-recessed border-b border-strata-line text-left text-xs font-semibold text-strata-subtle">
+                                    <th class="py-3 px-4 w-32">{{ 'Invoice'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Issue Date'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Due Date'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Total'|trans }}</th>
+                                    <th class="py-3 px-4">{{ 'Status'|trans }}</th>
+                                    <th class="py-3 px-4 text-right w-28">{{ 'Actions'|trans }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-strata-hairline">
+                                {% for inv in order_invoices.list %}
+                                    <tr class="hover:bg-strata-elevated transition-colors">
+                                        <td class="py-3.5 px-4 font-medium text-strata-strong strata-tabular whitespace-nowrap">
+                                            <a href="{{ 'invoice'|url }}/{{ inv.hash }}" class="text-strata-brand hover:underline">
+                                                #{{ inv.id }}
+                                            </a>
+                                        </td>
+                                        <td class="py-3.5 px-4 text-strata-subtle strata-tabular whitespace-nowrap">
+                                            {{ inv.created_at|format_date }}
+                                        </td>
+                                        <td class="py-3.5 px-4 text-strata-subtle strata-tabular whitespace-nowrap">
+                                            {{ inv.due_at ? inv.due_at|format_date : '-' }}
+                                        </td>
+                                        <td class="py-3.5 px-4 font-semibold text-strata-strong strata-tabular whitespace-nowrap">
+                                            {{ inv.total|format_currency(inv.currency) }}
+                                        </td>
+                                        <td class="py-3.5 px-4 whitespace-nowrap">
+                                            {{ mf.status_badge(inv.status, 'invoice') }}
+                                        </td>
+                                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                            <a href="{{ 'invoice'|url }}/{{ inv.hash }}" class="strata-btn strata-btn-secondary strata-btn-sm inline-flex items-center gap-1">
+                                                <span>{{ 'View'|trans }}</span>
+                                                <svg class="size-3 text-strata-subtle" aria-hidden="true"><use href="#chevron-right" /></svg>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-8 text-center text-sm text-strata-subtle">
+                        {{ 'No invoices found for this service.'|trans }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modals: Cancellation, Open Ticket, Upgrade #}
+{# Cancellation Request Modal #}
+<div class="modal fade" id="cancel-request-modal" tabindex="-1" role="dialog" aria-labelledby="cancel-modal" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-2xl bg-strata-base border border-strata-line shadow-xl overflow-hidden">
+            <div class="modal-header px-6 py-4 border-b border-strata-hairline flex items-center justify-between">
+                <h3 class="modal-title text-base font-semibold text-strata-strong">{{ 'Submit Cancellation Request'|trans }}</h3>
+                <button type="button" class="btn-close rounded-lg p-1 text-strata-subtle hover:bg-strata-fill hover:text-strata-strong transition-colors cursor-pointer" data-bs-dismiss="modal" aria-label="{{ 'Close'|trans }}">
+                    <svg class="size-4" aria-hidden="true"><use href="#x" /></svg>
+                </button>
+            </div>
+            <form action="" method="post" id="cancel-request-form" class="request-cancellation">
+                <div class="modal-body p-6 space-y-4 text-sm text-strata-default">
+                    <input type="hidden" name="rel_type" value="order">
+                    <input type="hidden" name="rel_id" value="{{ order.id }}">
+                    <input type="hidden" name="rel_task" value="cancel">
+
+                    <div>
+                        <label for="cancel-helpdesk-id" class="strata-label">{{ 'Help Desk'|trans }}</label>
+                        {{ mf.selectbox('support_helpdesk_id', client.support_helpdesk_get_pairs, request.support_helpdesk_id, 1) }}
+                    </div>
+
+                    <div>
+                        <label for="cancel-subject" class="strata-label">{{ 'Subject'|trans }}</label>
+                        <input class="strata-input" type="text" name="subject" id="cancel-subject" value="{{ request.subject|e }}" required />
+                    </div>
+
+                    <div>
+                        <label for="cancel-content" class="strata-label">{{ 'Reason for Cancellation'|trans }}</label>
+                        <textarea class="strata-textarea" id="cancel-content" name="content" rows="4" required placeholder="{{ 'Please let us know why you wish to cancel this service...'|trans }}">{{ request.content|e }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer px-6 py-4 border-t border-strata-hairline bg-strata-recessed flex items-center justify-end gap-2.5">
+                    <button type="button" class="strata-btn strata-btn-secondary" data-bs-dismiss="modal">{{ 'Cancel'|trans }}</button>
+                    <button type="submit" class="strata-btn strata-btn-danger">{{ 'Submit Request'|trans }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Open Support Ticket Modal #}
+<div class="modal fade" id="open-ticket-modal" tabindex="-1" role="dialog" aria-labelledby="ticket-modal" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-2xl bg-strata-base border border-strata-line shadow-xl overflow-hidden">
+            <div class="modal-header px-6 py-4 border-b border-strata-hairline flex items-center justify-between">
+                <h3 class="modal-title text-base font-semibold text-strata-strong">{{ 'Submit New Support Ticket'|trans }}</h3>
+                <button type="button" class="btn-close rounded-lg p-1 text-strata-subtle hover:bg-strata-fill hover:text-strata-strong transition-colors cursor-pointer" data-bs-dismiss="modal" aria-label="{{ 'Close'|trans }}">
+                    <svg class="size-4" aria-hidden="true"><use href="#x" /></svg>
+                </button>
+            </div>
+            <form action="" method="post" id="open-ticket-form" class="open-ticket">
+                <div class="modal-body p-6 space-y-4 text-sm text-strata-default">
+                    <input type="hidden" name="rel_type" value="order">
+                    <input type="hidden" name="rel_id" value="{{ order.id }}">
+
+                    <div>
+                        <label for="ticket-helpdesk-id" class="strata-label">{{ 'Help Desk'|trans }}</label>
+                        {{ mf.selectbox('support_helpdesk_id', client.support_helpdesk_get_pairs, request.support_helpdesk_id, 1) }}
+                    </div>
+
+                    <div>
+                        <label for="ticket-subject" class="strata-label">{{ 'Subject'|trans }}</label>
+                        <input class="strata-input" type="text" name="subject" id="ticket-subject" value="{{ request.subject|e }}" required />
+                    </div>
+
+                    <div>
+                        <label for="ticket-content" class="strata-label">{{ 'Message'|trans }}</label>
+                        <textarea class="editor-textarea strata-textarea" id="ticket-content" name="content" rows="5" required placeholder="{{ 'Describe your issue or question...'|trans }}">{{ request.content|e }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer px-6 py-4 border-t border-strata-hairline bg-strata-recessed flex items-center justify-end gap-2.5">
+                    <button type="button" class="strata-btn strata-btn-secondary" data-bs-dismiss="modal">{{ 'Cancel'|trans }}</button>
+                    <button type="submit" class="strata-btn strata-btn-primary">{{ 'Open Ticket'|trans }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Upgrade Request Modal #}
+<div class="modal fade" id="upgrade-request-modal" tabindex="-1" role="dialog" aria-labelledby="upgrade-modal" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-2xl bg-strata-base border border-strata-line shadow-xl overflow-hidden">
+            <div class="modal-header px-6 py-4 border-b border-strata-hairline flex items-center justify-between">
+                <h3 class="modal-title text-base font-semibold text-strata-strong">{{ 'Submit Upgrade Request'|trans }}</h3>
+                <button type="button" class="btn-close rounded-lg p-1 text-strata-subtle hover:bg-strata-fill hover:text-strata-strong transition-colors cursor-pointer" data-bs-dismiss="modal" aria-label="{{ 'Close'|trans }}">
+                    <svg class="size-4" aria-hidden="true"><use href="#x" /></svg>
+                </button>
+            </div>
+            <form action="" method="post" id="upgrade-request-form" class="request-upgrade">
+                <div class="modal-body p-6 space-y-4 text-sm text-strata-default">
+                    <input type="hidden" name="rel_type" value="order">
+                    <input type="hidden" name="rel_id" value="{{ order.id }}">
+                    <input type="hidden" name="rel_task" value="upgrade">
+
+                    <div>
+                        <label for="upgrade-helpdesk-id" class="strata-label">{{ 'Help Desk'|trans }}</label>
+                        {{ mf.selectbox('support_helpdesk_id', client.support_helpdesk_get_pairs, request.support_helpdesk_id, 1) }}
+                    </div>
+
+                    <div>
+                        <label for="upgrade-subject" class="strata-label">{{ 'Subject'|trans }}</label>
+                        <input class="strata-input" type="text" name="subject" id="upgrade-subject" value="{{ request.subject|e }}" required />
+                    </div>
+
+                    <div>
+                        <label for="rel_new_value" class="strata-label">{{ 'Upgrade To'|trans }}</label>
+                        {{ mf.selectbox('rel_new_value', upgradables, '', 1) }}
+                    </div>
+
+                    <div>
+                        <label for="upgrade-content" class="strata-label">{{ 'Notes'|trans }}</label>
+                        <textarea id="upgrade-content" name="content" rows="4" required class="strata-textarea" placeholder="{{ 'Your comment'|trans }}">{{ 'I would like to upgrade'|trans }} {{ order.title }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer px-6 py-4 border-t border-strata-hairline bg-strata-recessed flex items-center justify-end gap-2.5">
+                    <button type="button" class="strata-btn strata-btn-secondary" data-bs-dismiss="modal">{{ 'Cancel'|trans }}</button>
+                    <button type="submit" class="strata-btn strata-btn-primary" id="open-ticket-submit">{{ 'Submit Upgrade Request'|trans }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+{% autoescape "js" %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Universal modal helpers (works with or without bootstrap JS bundle)
+        const modalHelper = {
+            show: function(el) {
+                if (!el) return;
+                el.style.display = 'flex';
+                el.classList.add('show');
+                document.body.classList.add('overflow-hidden');
+            },
+            hide: function(el) {
+                if (!el) return;
+                el.classList.remove('show');
+                el.style.display = 'none';
+                document.body.classList.remove('overflow-hidden');
+            }
+        };
+
+        // Bootstrap mock / bridge so existing modal calls always succeed
+        window.bootstrap = window.bootstrap || {};
+        window.bootstrap.Modal = window.bootstrap.Modal || {
+            getInstance: function(el) {
+                return {
+                    hide: () => modalHelper.hide(el),
+                    show: () => modalHelper.show(el)
+                };
+            },
+            getOrCreateInstance: function(el) {
+                return this.getInstance(el);
+            }
+        };
+
+        // Bind modal trigger buttons
+        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetSelector = this.getAttribute('data-bs-target');
+                if (targetSelector) {
+                    const modalEl = document.querySelector(targetSelector);
+                    modalHelper.show(modalEl);
+                }
+            });
+        });
+
+        // Bind modal dismiss buttons and backdrop clicks
+        document.querySelectorAll('.modal').forEach(modalEl => {
+            modalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(closeBtn => {
+                closeBtn.addEventListener('click', () => modalHelper.hide(modalEl));
+            });
+
+            modalEl.addEventListener('click', function(e) {
+                if (e.target === modalEl) {
+                    modalHelper.hide(modalEl);
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.show').forEach(m => modalHelper.hide(m));
+            }
+        });
+
+        // Form Handlers
+        const cancelRequestForm = document.getElementById('cancel-request-form');
+        const upgradeRequestForm = document.getElementById('upgrade-request-form');
+        const openTicketForm = document.getElementById('open-ticket-form');
+
+        if (cancelRequestForm) {
+            cancelRequestForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                FOSSBilling.api.client.post('support/ticket_create', FOSSBilling.tools.serializeFormDataToObject(new FormData(cancelRequestForm)),
+                    () => {
+                        FOSSBilling.message("{{ 'Service cancellation request received'|trans }}", 'success');
+                        modalHelper.hide(document.getElementById('cancel-request-modal'));
+                    },
+                    (res) => {
+                        FOSSBilling.message(`${res.message} (${res.code})`, 'error');
+                    });
+            });
+        }
+
+        if (upgradeRequestForm) {
+            upgradeRequestForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                FOSSBilling.api.client.post('support/ticket_create', FOSSBilling.tools.serializeFormDataToObject(new FormData(upgradeRequestForm)),
+                    () => {
+                        FOSSBilling.message("{{ 'Service upgrade request received'|trans }}", 'success');
+                        modalHelper.hide(document.getElementById('upgrade-request-modal'));
+                    },
+                    (res) => {
+                        FOSSBilling.message(`${res.message} (${res.code})`, 'error');
+                    });
+            });
+        }
+
+        if (openTicketForm) {
+            openTicketForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                FOSSBilling.api.client.post('support/ticket_create', FOSSBilling.tools.serializeFormDataToObject(new FormData(openTicketForm)),
+                    () => {
+                        FOSSBilling.message("{{ 'Ticket was submitted. If you want to track conversation please go to support section'|trans }}", 'success');
+                        modalHelper.hide(document.getElementById('open-ticket-modal'));
+                    },
+                    (res) => {
+                        FOSSBilling.message(`${res.message} (${res.code})`, 'error');
+                    });
+            });
+        }
+    });
+</script>
+{% endautoescape %}
+{% endblock %}

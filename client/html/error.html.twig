@@ -1,0 +1,41 @@
+{% extends "layout_default.html.twig" %}
+
+{% block meta_title %}{{ 'Error'|trans }} {{ exception.getCode }}{% endblock %}
+
+{% block body_class %}error-page{% endblock %}
+
+{% block breadcrumb %}
+    <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ exception.getCode|default(404) }}</li>
+{% endblock %}
+
+{% block content %}
+    <div class="py-12 sm:py-16 flex justify-center" data-animate="fade-up">
+        <div class="w-full max-w-lg rounded-2xl bg-strata-base border border-strata-hairline p-8 sm:p-10 text-center shadow-xs">
+            <div class="inline-flex items-center justify-center size-12 rounded-xl bg-strata-warning-tint text-strata-warning mb-5">
+                <svg class="size-6" aria-hidden="true"><use href="#warning" /></svg>
+            </div>
+
+            <div class="text-5xl sm:text-6xl font-bold tracking-tight text-strata-strong tabular-nums mb-3">
+                {% if exception.getCode %}
+                    {{ exception.getCode }}
+                {% else %}
+                    404
+                {% endif %}
+            </div>
+
+            <p class="text-base font-medium text-strata-default mb-1">
+                {{ 'Whoops! Unable to find the page you are looking for'|trans }}.
+            </p>
+            {% if exception.getMessage %}
+                <p class="text-sm text-strata-subtle mb-6">{{ exception.getMessage }}</p>
+            {% else %}
+                <div class="mb-6"></div>
+            {% endif %}
+
+            <a class="inline-flex items-center justify-center gap-2 rounded-lg bg-strata-brand hover:bg-strata-brand-hover text-white font-medium px-4 py-2 text-sm transition-colors" href="{{ '/'|url }}">
+                <svg class="size-4" aria-hidden="true"><use href="#arrow-left" /></svg>
+                <span>{{ 'Go Back to Home'|trans }}</span>
+            </a>
+        </div>
+    </div>
+{% endblock %}

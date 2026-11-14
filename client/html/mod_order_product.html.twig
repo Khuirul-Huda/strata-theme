@@ -1,0 +1,504 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'order' %}
+
+{% import "macro_functions.html.twig" as mf %}
+
+{% if product is not defined or not product %}
+    {% set product = request.product ? guest.product_get({"id": request.product}) : null %}
+{% endif %}
+
+{% block meta_title %}{{ 'Order'|trans }}{% if product %} - {{ product.title }}{% endif %}{% endblock %}
+
+{% block body_class %}order-product{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{{ 'order'|url }}" class="hover:text-strata-strong transition-colors">{{ 'Order'|trans }}</a></li>
+    {% if product %}
+        <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ product.title }}</li>
+    {% else %}
+        <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ 'Product Not Found'|trans }}</li>
+    {% endif %}
+{% endblock %}
+
+{% block content_before %}{% endblock %}
+
+{% block content %}
+{% if not product %}
+    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-12 text-center flex flex-col items-center justify-center max-w-lg mx-auto" data-animate="fade-up">
+        <div class="size-12 rounded-full bg-strata-danger-tint text-strata-danger flex items-center justify-center mb-4">
+            <svg class="size-6" aria-hidden="true"><use href="#warning" /></svg>
+        </div>
+        <h2 class="text-xl font-bold text-strata-strong mb-2">{{ 'Product Not Found'|trans }}</h2>
+        <p class="text-sm text-strata-subtle mb-6">{{ 'The product you are trying to configure could not be found or is no longer available.'|trans }}</p>
+        <a href="{{ 'order'|url }}" class="strata-btn strata-btn-primary">
+            <svg class="size-4" aria-hidden="true"><use href="#arrow-left" /></svg>
+            <span>{{ 'Back to Catalog'|trans }}</span>
+        </a>
+    </div>
+{% else %}
+    {% set cart_currency = guest.cart_get_currency %}
+    {% set currencies = guest.currency_get_pairs %}
+
+    <form method="post" action="{{ 'cart/add_item'|api_url(role: 'guest') }}" id="order-configure-form"
+          class="form-{{ product.form_id ? guest.formbuilder_get({"id": product.form_id}).style.type : 0 }}"
+          {{ fb_api_form({message: 'Product Added to Shopping Cart'|trans, redirect: ('order'|url(query: { 'checkout' : 1 }) ~ (request.show_custom_form_values ? '&show_custom_form_values=1' : ''))}) }}>
+
+        {# 2-Column Responsive Configurator Layout #}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" data-animate="fade-up">
+            {# Left Column: 8 cols (Configuration, Addons, Billing Cycle) #}
+            <div class="lg:col-span-8 space-y-6">
+                {# Product Header Card #}
+                <div class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs">
+                    <div class="flex items-start gap-4">
+                        <div class="size-14 rounded-2xl bg-strata-fill flex items-center justify-center text-strata-brand shrink-0">
+                            {% if product.icon_url %}
+                                <img src="{{ product.icon_url }}" alt="" class="size-8 object-contain" />
+                            {% else %}
+                                <svg class="size-7" aria-hidden="true"><use href="#package" /></svg>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <h1 class="text-2xl font-bold tracking-tight text-strata-strong">{{ product.title }}</h1>
+                                {% if product.type %}
+                                    <span class="inline-flex items-center rounded-full bg-strata-fill px-2.5 py-0.5 text-xs font-medium text-strata-subtle border border-strata-hairline">
+                                        {{ product.type|title }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {% if product.description %}
+                                <div class="text-sm text-strata-subtle mt-2 leading-relaxed">
+                                    {{ (product.description ?? '')|markdown_to_html }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {# Billing Cycle & Quantity Card #}
+                {% if product.pricing.type is defined %}
+                    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs space-y-5">
+                        <div class="flex items-center gap-2 pb-3 border-b border-strata-hairline">
+                            <svg class="size-5 text-strata-brand" aria-hidden="true"><use href="#credit-card" /></svg>
+                            <h2 class="text-base font-semibold text-strata-strong">{{ 'Billing & Terms'|trans }}</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {# Cycle Selector #}
+                            <div>
+                                <label for="period-selector" class="block text-xs font-semibold text-strata-strong uppercase tracking-wider mb-2">
+                                    {% if product.pricing.type == 'recurrent' %}
+                                        {{ 'Billing Cycle'|trans }}
+                                    {% else %}
+                                        {{ 'Payment Term'|trans }}
+                                    {% endif %}
+                                </label>
+
+                                {% if product.pricing.type == 'recurrent' %}
+                                    <select name="period" id="period-selector" class="w-full rounded-lg bg-strata-control border border-strata-line px-3.5 py-2.5 text-sm text-strata-default focus:outline-none focus:ring-2 focus:ring-strata-focus">
+                                        {% for code, prices in product.pricing.recurrent %}
+                                            {% if prices.enabled %}
+                                                <option value="{{ code }}"
+                                                        data-price="{{ (prices.price * cart_currency.conversion_rate) }}"
+                                                        data-setup="{{ (prices.setup * cart_currency.conversion_rate) }}"
+                                                        data-title="{{ prices.title }}"
+                                                        {% if request.period == code %}selected="selected"{% endif %}>
+                                                    {{ prices.title }} - {{ (prices.price * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                                    {% if prices.setup > 0 %}
+                                                        (+{{ (prices.setup * cart_currency.conversion_rate)|format_currency(cart_currency.code) }} {{ 'setup'|trans }})
+                                                    {% endif %}
+                                                </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                {% elseif product.pricing.type == 'free' %}
+                                    <div class="rounded-lg bg-strata-success-tint border border-strata-success/20 px-3.5 py-2.5 text-sm font-semibold text-strata-success">
+                                        {{ 'Free of Charge'|trans }}
+                                    </div>
+                                {% else %}
+                                    <div class="rounded-lg bg-strata-recessed border border-strata-hairline px-3.5 py-2.5 text-sm font-semibold text-strata-strong strata-tabular">
+                                        {{ ((product.pricing.once.price + product.pricing.once.setup) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                        <span class="text-xs font-normal text-strata-subtle">({{ 'One-time payment'|trans }})</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {# Quantity Selector #}
+                            {% if product.allow_quantity_select %}
+                                <div>
+                                    <label for="quantity-input" class="block text-xs font-semibold text-strata-strong uppercase tracking-wider mb-2">
+                                        {{ 'Quantity'|trans }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" name="quantity" id="quantity-input" value="1" min="1"
+                                               {% if product.stock_control %}max="{{ product.quantity_in_stock }}"{% endif %}
+                                               class="w-32 rounded-lg bg-strata-control border border-strata-line px-3 py-2 text-sm text-strata-default text-center strata-tabular focus:outline-none focus:ring-2 focus:ring-strata-focus">
+                                        {% if product.stock_control %}
+                                            <span class="text-xs text-strata-subtle">
+                                                ({{ product.quantity_in_stock }} {{ 'available'|trans }})
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# Service-Specific Configuration or Custom Formbuilder #}
+                {% set product_details %}
+                    <div class="rounded-xl bg-strata-recessed border border-strata-hairline p-4 space-y-2">
+                        <div class="text-sm font-semibold text-strata-strong">{{ product.title }}</div>
+                        {% if product.description %}
+                            <div class="text-xs text-strata-subtle">{{ (product.description ?? '')|markdown_to_html }}</div>
+                        {% endif %}
+                    </div>
+                {% endset %}
+
+                {% set tpl = "mod_service" ~ product.type ~ "_order_form.html.twig" %}
+                {% if guest.system_template_exists({"file": tpl}) %}
+                    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs space-y-4">
+                        <div class="flex items-center gap-2 pb-3 border-b border-strata-hairline">
+                            <svg class="size-5 text-strata-brand" aria-hidden="true"><use href="#sliders" /></svg>
+                            <h2 class="text-base font-semibold text-strata-strong">{{ 'Configuration'|trans }}</h2>
+                        </div>
+                        <div class="service-order-form">
+                            {{ include(tpl, product) }}
+                        </div>
+                    </div>
+                {% elseif product.form_id and guest.extension_is_on({"module": "formbuilder"}) %}
+                    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs space-y-4">
+                        <div class="flex items-center gap-2 pb-3 border-b border-strata-hairline">
+                            <svg class="size-5 text-strata-brand" aria-hidden="true"><use href="#sliders" /></svg>
+                            <h2 class="text-base font-semibold text-strata-strong">{{ 'Custom Options'|trans }}</h2>
+                        </div>
+                        {{ product_details }}
+                        {% set form = guest.formbuilder_get({"id": product.form_id}) %}
+                        {{ include('mod_formbuilder_build.html.twig', product) }}
+                    </div>
+                {% endif %}
+
+                {# Addons & Extras Card #}
+                {% if product.addons is defined and product.addons|length > 0 %}
+                    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs space-y-4">
+                        <div class="flex items-center justify-between pb-3 border-b border-strata-hairline">
+                            <div class="flex items-center gap-2">
+                                <svg class="size-5 text-strata-brand" aria-hidden="true"><use href="#sparkles" /></svg>
+                                <h2 class="text-base font-semibold text-strata-strong">{{ 'Addons & Extras'|trans }}</h2>
+                            </div>
+                            <span class="text-xs text-strata-subtle">{{ 'Optional enhancements'|trans }}</span>
+                        </div>
+
+                        <div class="space-y-3">
+                            {% for addon in product.addons %}
+                                <div class="rounded-xl border border-strata-hairline hover:border-strata-line bg-strata-recessed p-4 transition-colors">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div class="flex items-start gap-3">
+                                            {% if addon.icon_url %}
+                                                <img src="{{ addon.icon_url }}" alt="" class="size-9 object-contain rounded-lg shrink-0 mt-0.5" />
+                                            {% else %}
+                                                <div class="size-9 rounded-lg bg-strata-fill flex items-center justify-center text-strata-brand shrink-0 mt-0.5">
+                                                    <svg class="size-5" aria-hidden="true"><use href="#plus" /></svg>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <h3 class="text-sm font-semibold text-strata-strong">{{ addon.title }}</h3>
+                                                {% if addon.description %}
+                                                    <div class="text-xs text-strata-subtle mt-0.5 leading-relaxed">{{ (addon.description ?? '')|markdown_to_html }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-end gap-3 shrink-0">
+                                            {% if addon.pricing.type is same as('recurrent') %}
+                                                <select name="addons[{{ addon.id }}][period]" class="addon-period-select rounded-lg bg-strata-control border border-strata-line px-2.5 py-1.5 text-xs text-strata-default focus:outline-none focus:ring-2 focus:ring-strata-focus">
+                                                    {% for code, prices in addon.pricing.recurrent %}
+                                                        {% if prices.enabled %}
+                                                            <option value="{{ code }}" data-price="{{ (prices.price * cart_currency.conversion_rate) }}" data-setup="{{ (prices.setup * cart_currency.conversion_rate) }}">
+                                                                {{ (prices.price * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                                                {% if prices.setup != '0.00' %}
+                                                                    (+{{ (prices.setup * cart_currency.conversion_rate)|format_currency(cart_currency.code) }} {{ 'setup'|trans }})
+                                                                {% endif %}
+                                                                ({{ prices.title }})
+                                                            </option>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </select>
+                                            {% elseif addon.pricing.type is same as('once') %}
+                                                <span class="text-xs font-semibold text-strata-strong strata-tabular" data-addon-fixed-price="{{ ((addon.pricing.once.price + addon.pricing.once.setup) * cart_currency.conversion_rate) }}">
+                                                    {{ ((addon.pricing.once.price + addon.pricing.once.setup) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                                </span>
+                                            {% elseif addon.pricing.type is same as('free') %}
+                                                <span class="text-xs font-semibold text-strata-success">{{ 'Free'|trans }}</span>
+                                            {% endif %}
+
+                                            {% if addon.allow_quantity_select %}
+                                                <input type="number" name="addons[{{ addon.id }}][quantity]" value="1" min="1"
+                                                       class="w-16 rounded-lg bg-strata-control border border-strata-line px-2 py-1 text-xs text-strata-default text-center strata-tabular focus:outline-none focus:ring-2 focus:ring-strata-focus"
+                                                       aria-label="{{ 'Addon quantity'|trans }}">
+                                            {% endif %}
+
+                                            {# Add/Remove Toggle #}
+                                            <div class="inline-flex rounded-lg border border-strata-line bg-strata-control p-0.5 text-xs">
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="addons[{{ addon.id }}][selected]" value="1" id="addon_{{ addon.id }}" class="sr-only peer addon-toggle-input" data-addon-id="{{ addon.id }}" />
+                                                    <span class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-strata-subtle peer-checked:bg-strata-success peer-checked:text-white font-medium transition-colors">
+                                                        <svg class="size-3.5" aria-hidden="true"><use href="#check" /></svg>
+                                                        <span>{{ 'Add'|trans }}</span>
+                                                    </span>
+                                                </label>
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="addons[{{ addon.id }}][selected]" value="0" id="addon_{{ addon.id }}_decline" checked class="sr-only peer addon-toggle-input" data-addon-id="{{ addon.id }}" />
+                                                    <span class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-strata-subtle peer-checked:bg-strata-fill peer-checked:text-strata-strong font-medium transition-colors">
+                                                        <svg class="size-3.5" aria-hidden="true"><use href="#x" /></svg>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# Hidden Form Fields #}
+                <input type="hidden" name="multiple" value="1" />
+                <input type="hidden" name="id" value="{{ product.id }}" />
+            </div>
+
+            {# Right Column: 4 cols Sticky Summary Card #}
+            <div class="lg:col-span-4">
+                <div class="lg:sticky lg:top-24 rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs space-y-6">
+                    <div class="flex items-center justify-between pb-3 border-b border-strata-hairline">
+                        <div class="flex items-center gap-2">
+                            <svg class="size-5 text-strata-brand" aria-hidden="true"><use href="#receipt" /></svg>
+                            <h2 class="text-base font-semibold text-strata-strong">{{ 'Order Summary'|trans }}</h2>
+                        </div>
+                        <span class="text-xs text-strata-subtle">{{ 'Step 1 of 2'|trans }}</span>
+                    </div>
+
+                    {# Line items breakdown #}
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between items-start gap-2">
+                            <div>
+                                <span class="font-medium text-strata-strong">{{ product.title }}</span>
+                                <div id="summary-period-label" class="text-xs text-strata-subtle mt-0.5">
+                                    {% if product.pricing.type == 'recurrent' %}
+                                        {{ 'Recurring payment'|trans }}
+                                    {% elseif product.pricing.type == 'once' %}
+                                        {{ 'One-time payment'|trans }}
+                                    {% else %}
+                                        {{ 'Free'|trans }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <span id="summary-base-price" class="font-semibold text-strata-strong strata-tabular text-right">
+                                {% if product.pricing.type == 'free' %}
+                                    {{ 0|format_currency(cart_currency.code) }}
+                                {% elseif product.pricing.type == 'once' %}
+                                    {{ (product.pricing.once.price * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                {% elseif product.pricing.type == 'recurrent' %}
+                                    {{ (product.price_starting_from * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        {# Setup Fee Line #}
+                        <div id="summary-setup-row" class="flex justify-between text-xs text-strata-subtle" style="display: none;">
+                            <span>{{ 'Setup Fee'|trans }}</span>
+                            <span id="summary-setup-fee" class="font-medium text-strata-default strata-tabular"></span>
+                        </div>
+
+                        {# Quantity Multiplier Line #}
+                        <div id="summary-quantity-row" class="flex justify-between text-xs text-strata-subtle" style="display: none;">
+                            <span>{{ 'Quantity Multiplier'|trans }}</span>
+                            <span id="summary-quantity-val" class="font-medium text-strata-default strata-tabular">&times; 1</span>
+                        </div>
+
+                        {# Addons Subtotal Line #}
+                        <div id="summary-addons-row" class="flex justify-between text-xs text-strata-brand" style="display: none;">
+                            <span>{{ 'Selected Addons'|trans }}</span>
+                            <span id="summary-addons-fee" class="font-medium strata-tabular"></span>
+                        </div>
+
+                        <hr class="border-strata-hairline my-2" />
+
+                        {# Total Price Line #}
+                        <div class="pt-1 flex items-baseline justify-between gap-2">
+                            <div>
+                                <div class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Total Due Today'|trans }}</div>
+                                <div class="text-xs text-strata-subtle" id="summary-currency-name">{{ cart_currency.code }}</div>
+                            </div>
+                            <div id="summary-total-price" class="text-3xl font-bold tracking-tight text-strata-strong strata-tabular">
+                                {% if product.pricing.type == 'free' %}
+                                    {{ 0|format_currency(cart_currency.code) }}
+                                {% elseif product.pricing.type == 'once' %}
+                                    {{ ((product.pricing.once.price + product.pricing.once.setup) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                {% elseif product.pricing.type == 'recurrent' %}
+                                    {{ (product.price_starting_from * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Primary CTA Button #}
+                    <div>
+                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-strata-brand hover:bg-strata-brand-hover text-white font-medium px-4 py-3 text-base transition-colors cursor-pointer shadow-xs" id="config-next">
+                            <svg class="size-5" aria-hidden="true"><use href="#shopping-cart" /></svg>
+                            <span>{{ 'Continue to Checkout'|trans }}</span>
+                        </button>
+                    </div>
+
+                    {# Trust & Security Badges #}
+                    <div class="pt-4 border-t border-strata-hairline space-y-2.5 text-xs text-strata-subtle">
+                        <div class="flex items-center gap-2">
+                            <svg class="size-4 text-strata-success shrink-0" aria-hidden="true"><use href="#shield-check" /></svg>
+                            <span>{{ 'Encrypted & secure checkout'|trans }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="size-4 text-strata-brand shrink-0" aria-hidden="true"><use href="#sparkles" /></svg>
+                            <span>{{ 'Instant service activation upon payment'|trans }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endif %}
+{% endblock %}
+
+{% block sidebar2 %}
+    {{ include('partial_currency.html.twig', ignore_missing: true) }}
+{% endblock %}
+
+{% block js %}
+{% autoescape "js" %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const periodSelector = document.getElementById('period-selector');
+        const quantityInput = document.getElementById('quantity-input');
+        const summaryBasePrice = document.getElementById('summary-base-price');
+        const summarySetupRow = document.getElementById('summary-setup-row');
+        const summarySetupFee = document.getElementById('summary-setup-fee');
+        const summaryQuantityRow = document.getElementById('summary-quantity-row');
+        const summaryQuantityVal = document.getElementById('summary-quantity-val');
+        const summaryAddonsRow = document.getElementById('summary-addons-row');
+        const summaryAddonsFee = document.getElementById('summary-addons-fee');
+        const summaryTotalPrice = document.getElementById('summary-total-price');
+        const summaryPeriodLabel = document.getElementById('summary-period-label');
+
+        const currencyCode = "{{ guest.cart_get_currency.code }}";
+        const currencySymbol = "{{ guest.cart_get_currency.symbol|default('$') }}";
+        const conversionRate = parseFloat("{{ guest.cart_get_currency.conversion_rate|default(1) }}") || 1;
+
+        function formatMoney(amount) {
+            return currencySymbol + amount.toFixed(2);
+        }
+
+        function calculateLiveTotal() {
+            let basePrice = 0;
+            let setupFee = 0;
+            let quantity = 1;
+
+            if (quantityInput) {
+                quantity = Math.max(1, parseInt(quantityInput.value, 10) || 1);
+                if (summaryQuantityRow && summaryQuantityVal) {
+                    if (quantity > 1) {
+                        summaryQuantityRow.style.display = 'flex';
+                        summaryQuantityVal.textContent = '× ' + quantity;
+                    } else {
+                        summaryQuantityRow.style.display = 'none';
+                    }
+                }
+            }
+
+            if (periodSelector) {
+                const opt = periodSelector.options[periodSelector.selectedIndex];
+                if (opt) {
+                    basePrice = parseFloat(opt.getAttribute('data-price')) || 0;
+                    setupFee = parseFloat(opt.getAttribute('data-setup')) || 0;
+                    if (summaryPeriodLabel && opt.getAttribute('data-title')) {
+                        summaryPeriodLabel.textContent = opt.getAttribute('data-title');
+                    }
+                }
+            } else {
+                {% if product.pricing.type == 'once' %}
+                    basePrice = parseFloat("{{ product.pricing.once.price * guest.cart_get_currency.conversion_rate }}") || 0;
+                    setupFee = parseFloat("{{ product.pricing.once.setup * guest.cart_get_currency.conversion_rate }}") || 0;
+                {% elseif product.pricing.type == 'free' %}
+                    basePrice = 0;
+                    setupFee = 0;
+                {% endif %}
+            }
+
+            if (summaryBasePrice) {
+                summaryBasePrice.textContent = formatMoney(basePrice);
+            }
+
+            if (summarySetupRow && summarySetupFee) {
+                if (setupFee > 0) {
+                    summarySetupRow.style.display = 'flex';
+                    summarySetupFee.textContent = formatMoney(setupFee);
+                } else {
+                    summarySetupRow.style.display = 'none';
+                }
+            }
+
+            // Calculate addons
+            let addonsTotal = 0;
+            document.querySelectorAll('.addon-toggle-input:checked').forEach(radio => {
+                if (radio.value === '1') {
+                    const addonRow = radio.closest('.rounded-xl');
+                    if (addonRow) {
+                        const periodSelect = addonRow.querySelector('.addon-period-select');
+                        const fixedPriceEl = addonRow.querySelector('[data-addon-fixed-price]');
+                        let addonPrice = 0;
+                        if (periodSelect) {
+                            const selectedOption = periodSelect.options[periodSelect.selectedIndex];
+                            addonPrice = parseFloat(selectedOption?.getAttribute('data-price')) || 0;
+                        } else if (fixedPriceEl) {
+                            addonPrice = parseFloat(fixedPriceEl.getAttribute('data-addon-fixed-price')) || 0;
+                        }
+                        const qtyInput = addonRow.querySelector('input[type="number"]');
+                        const addonQty = qtyInput ? Math.max(1, parseInt(qtyInput.value, 10) || 1) : 1;
+                        addonsTotal += (addonPrice * addonQty);
+                    }
+                }
+            });
+
+            if (summaryAddonsRow && summaryAddonsFee) {
+                if (addonsTotal > 0) {
+                    summaryAddonsRow.style.display = 'flex';
+                    summaryAddonsFee.textContent = '+ ' + formatMoney(addonsTotal);
+                } else {
+                    summaryAddonsRow.style.display = 'none';
+                }
+            }
+
+            const total = (basePrice * quantity) + setupFee + addonsTotal;
+            if (summaryTotalPrice) {
+                summaryTotalPrice.textContent = formatMoney(total);
+            }
+        }
+
+        periodSelector?.addEventListener('change', calculateLiveTotal);
+        quantityInput?.addEventListener('input', calculateLiveTotal);
+
+        document.querySelectorAll('.addon-toggle-input').forEach(radio => {
+            radio.addEventListener('change', calculateLiveTotal);
+        });
+
+        document.querySelectorAll('.addon-period-select').forEach(select => {
+            select.addEventListener('change', calculateLiveTotal);
+        });
+
+        document.querySelectorAll('input[name*="[quantity]"]').forEach(input => {
+            input.addEventListener('input', calculateLiveTotal);
+        });
+
+        calculateLiveTotal();
+    });
+</script>
+{% endautoescape %}
+{% endblock %}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+{% set active_locale = guest.system_locale|default('en')|replace({'_': '-'}) %}
+{% set canonical_url = guest.system_current_url|url %}
+{% set company = guest.system_company %}
+{% set public_logo_url = company.logo_url %}
+{% set public_dark_logo_url = company.logo_url_dark %}
+{% set raw_page_title = block('meta_title')|trim %}
+{% set page_title = (settings.meta_title_prefix|default('') ~ ' ' ~ raw_page_title ~ ' ' ~ settings.meta_title_suffix|default(''))|trim %}
+{% set meta_description = block('meta_description')|default(settings.meta_description|default('')) %}
+{% set default_mode = settings.theme|default('light') == 'dark' ? 'dark' : 'light' %}
+{% set default_motion = settings.motion_intensity|default('full') %}
+{% set default_accent = settings.accent_color|default('orange') %}
+{% set languages = guest.extension_languages(true) %}
+<html lang="{{ active_locale }}" data-theme="strata" data-mode="{{ default_mode }}" data-bs-theme="{{ default_mode }}" data-motion="{{ default_motion }}" data-accent="{{ default_accent }}">
+<head>
+    <meta charset="utf-8">
+    <title>{{ page_title }}</title>
+    <meta name="color-scheme" content="light dark">
+
+    <meta name="description" content="{% block meta_description %}{{ settings.meta_description|default('') }}{% endblock %}">
+    <meta name="keywords" content="{{ settings.meta_keywords|default('') }}">
+    <meta name="robots" content="{{ settings.meta_robots|default('') }}">
+    <meta name="author" content="{{ settings.meta_author|default('') }}">
+    <meta name="generator" content="FOSSBilling">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% block canonical %}
+        <link rel="canonical" href="{{ canonical_url }}">
+    {% endblock %}
+
+    {% block opengraph %}
+        <meta property="og:title" content="{{ page_title }}" />
+        <meta property="og:type" content="website" />
+        <meta property="og:description" content="{{ meta_description }}" />
+        <meta property="og:url" content="{{ canonical_url }}" />
+        <meta property="og:site_name" content="{{ guest.system_company.name }}" />
+    {% endblock %}
+
+    {{ include('partials/theme_init.html.twig') }}
+
+    <link rel="stylesheet" href="{{ 'build/css/strata.css' | asset_url }}">
+    <link rel="shortcut icon" href="{{ guest.system_company.favicon_url }}">
+
+    {{ 'js/fossbilling.js' | public_asset_url | script_tag }}
+    {{ 'js/api.js' | public_asset_url | script_tag }}
+    <script type="module" src="{{ 'build/js/main.js' | asset_url }}"></script>
+
+    {{ debug_bar_render_head() }}
+
+    {% block head %}{% endblock %}
+    {% block js %}{% endblock %}
+</head>
+
+<body class="min-h-screen bg-strata-canvas text-strata-default antialiased relative overflow-x-hidden selection:bg-strata-brand/15 selection:text-strata-strong {% block body_class %}{% endblock %}">
+    <div class="hidden" aria-hidden="true">{{ svg_sprite() }}</div>
+
+    {# Subtle ambient radial mesh background #}
+    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <div class="absolute -top-40 left-1/2 -translate-x-1/2 h-[34rem] w-[68rem] rounded-full opacity-25 blur-3xl bg-[radial-gradient(ellipse_at_center,var(--color-strata-brand),transparent_70%)]"></div>
+        <div class="absolute bottom-0 right-0 h-[24rem] w-[36rem] rounded-full opacity-15 blur-3xl bg-[radial-gradient(ellipse_at_center,var(--color-strata-info),transparent_70%)]"></div>
+    </div>
+
+    {{ render_widgets('client.theme.body.start') }}
+
+    <div class="min-h-screen flex flex-col">
+        <header class="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-end gap-2.5">
+            {% if languages|length > 0 %}
+                {{ include('partials/locale_switcher.html.twig', { languages: languages }) }}
+            {% endif %}
+
+            <div class="inline-flex items-center">
+                <a class="js-theme-toggler hide-theme-dark [[data-mode=dark]_&]:hidden inline-flex items-center justify-center size-9 rounded-lg bg-strata-base border border-strata-hairline hover:border-strata-line hover:bg-strata-fill-hover text-strata-subtle hover:text-strata-strong transition-colors"
+                   href="?theme=dark"
+                   data-theme-value="dark"
+                   aria-label="{{ 'Enable dark mode'|trans }}"
+                   title="{{ 'Enable dark mode'|trans }}">
+                    <svg class="size-4" aria-hidden="true"><use href="#moon" /></svg>
+                </a>
+                <a class="js-theme-toggler hide-theme-light [[data-mode=light]_&]:hidden inline-flex items-center justify-center size-9 rounded-lg bg-strata-base border border-strata-hairline hover:border-strata-line hover:bg-strata-fill-hover text-strata-subtle hover:text-strata-strong transition-colors"
+                   href="?theme=light"
+                   data-theme-value="light"
+                   aria-label="{{ 'Enable light mode'|trans }}"
+                   title="{{ 'Enable light mode'|trans }}">
+                    <svg class="size-4" aria-hidden="true"><use href="#sun" /></svg>
+                </a>
+            </div>
+        </header>
+
+        <main class="flex-1 flex flex-col justify-center px-4 sm:px-6 py-8">
+            <div class="w-full max-w-5xl mx-auto" data-animate="fade-up">
+                {% block body %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none" aria-live="polite" aria-atomic="true"></div>
+    <dialog id="strata-confirm-modal" class="strata-dialog m-auto rounded-xl bg-strata-base text-strata-default border border-strata-line shadow-xl p-0 max-w-md w-[calc(100%-2rem)] backdrop:bg-black/50 backdrop:backdrop-blur-xs"></dialog>
+
+    {{ include('partial_pending_messages.html.twig', ignore_missing: true) }}
+    {{ render_widgets('client.theme.body.end') }}
+    {{ debug_bar_render() }}
+</body>
+</html>

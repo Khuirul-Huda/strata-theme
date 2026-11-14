@@ -1,0 +1,156 @@
+<nav class="flex flex-col gap-5" id="sidebarMenu" aria-label="{{ 'Sidebar navigation'|trans }}">
+    <ul class="flex flex-col gap-1 list-none m-0 p-0">
+        {% if settings.side_menu_dashboard %}
+            {% set is_active = current_active_menu == 'dashboard' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ '/'|url }}"
+                   title="{{ 'Dashboard'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#layout-grid" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Dashboard'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if settings.side_menu_order %}
+            {% set is_active = current_active_menu == 'order' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ 'order'|url }}"
+                   title="{{ 'Order'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#shopping-cart" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Order'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if settings.side_menu_support %}
+            {% set is_active = current_active_menu == 'support' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ support_url }}"
+                   title="{{ 'Support'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#lifebuoy" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Support'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if settings.side_menu_services %}
+            {% set is_active = current_active_menu == 'services' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ 'order/service'|url }}"
+                   title="{{ 'Services'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#apps" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Services'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if settings.side_menu_invoices %}
+            {% set is_active = current_active_menu == 'invoices' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ 'invoice'|url }}"
+                   title="{{ 'Invoices'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#receipt" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Invoices'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if settings.side_menu_emails %}
+            {% set is_active = current_active_menu == 'emails' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ 'email'|url }}"
+                   title="{{ 'Email'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#mail" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Email'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if settings.side_menu_payments and guest.invoice_funds_enabled %}
+            {% set is_active = current_active_menu == 'payments' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ 'client/balance'|url }}"
+                   title="{{ 'Wallet'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#wallet" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Wallet'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if guest.extension_is_on({"module":"news"}) and settings.side_menu_news %}
+            {% set is_active = current_active_menu == 'news' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ 'news'|url }}"
+                   title="{{ 'News'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#news" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'News'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% if guest.support_kb_enabled() and settings.side_menu_kb %}
+            {% set is_active = current_active_menu == 'kb' %}
+            <li>
+                <a class="relative group flex items-center gap-3 [[data-sidebar-collapsed=true]_&]:justify-center [[data-sidebar-collapsed=true]_&]:px-2 px-3 py-2 rounded-lg text-sm transition-colors {% if is_active %}bg-strata-brand/10 text-strata-brand font-medium{% else %}text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover{% endif %}"
+                   href="{{ 'support/kb'|url }}"
+                   title="{{ 'Knowledge Base'|trans }}"
+                   {% if is_active %}aria-current="page" data-nav-indicator="active"{% endif %}>
+                    {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-strata-brand" data-nav-indicator aria-hidden="true"></span>{% endif %}
+                    <svg class="size-[18px] shrink-0" aria-hidden="true"><use href="#book" /></svg>
+                    <span class="truncate [[data-sidebar-collapsed=true]_&]:hidden">{{ 'Knowledge Base'|trans }}</span>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+
+    {% if settings.sidebar_balance_enabled and client %}
+        <div class="rounded-xl bg-strata-elevated border border-strata-hairline p-3.5 [[data-sidebar-collapsed=true]_&]:hidden">
+            <div class="flex items-center justify-between gap-2 mb-1">
+                <span class="text-xs font-medium text-strata-subtle">{{ 'Account Balance'|trans }}</span>
+                <svg class="size-3.5 text-strata-subtle" aria-hidden="true"><use href="#wallet" /></svg>
+            </div>
+            <div class="text-base font-semibold text-strata-strong tabular-nums">
+                {% if profile.currency is not null %}
+                    {{ profile.balance|format_currency(profile.currency ?? default_currency) }}
+                {% else %}
+                    -
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if settings.sidebar_note_enabled %}
+        <div class="rounded-xl bg-strata-recessed border border-strata-hairline p-3.5 text-xs [[data-sidebar-collapsed=true]_&]:hidden">
+            {% if settings.sidebar_note_title %}
+                <div class="font-semibold text-strata-strong mb-1">{{ settings.sidebar_note_title }}</div>
+            {% endif %}
+            {% if settings.sidebar_note_content %}
+                <p class="text-strata-subtle leading-relaxed m-0">{{ settings.sidebar_note_content }}</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</nav>

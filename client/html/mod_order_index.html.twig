@@ -1,0 +1,444 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'order' %}
+
+{% import "macro_functions.html.twig" as mf %}
+
+{% block meta_title %}{{ 'Order'|trans }}{% endblock %}
+{% block meta_description %}{{ 'Browse available products and services, compare options, and place your order online.'|trans }}{% endblock %}
+
+{% set loader_nr = request.loader|default("8") %}
+{% set loader_url = ('img/assets/loaders/loader' ~ loader_nr ~ '.gif') %}
+
+{% block body_class %}order-index{% endblock %}
+
+{% block breadcrumb %}
+    <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ 'Order'|trans }}</li>
+{% endblock %}
+
+{% block content_before %}{% endblock %}
+
+{% block content %}
+{% set cart = guest.cart_get %}
+{% set cart_currency = guest.cart_get_currency %}
+{% set currencies = guest.currency_get_pairs %}
+{% set categories = guest.product_category_get_list.list %}
+{% set all_products = guest.product_get_list.list %}
+
+<div class="space-y-8" data-animate="fade-up">
+    {# Page Header & Currency Selector Bar #}
+    <div class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-strata-strong mb-1">{{ 'Products & Services'|trans }}</h1>
+            <p class="text-sm text-strata-subtle">{{ 'Explore our hosting plans, domain registrations, and cloud infrastructure.'|trans }}</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            {% if currencies|length > 1 %}
+                <div class="inline-flex items-center gap-2 rounded-lg bg-strata-control border border-strata-line px-3 py-1.5 text-sm text-strata-default">
+                    <svg class="size-4 text-strata-subtle shrink-0" aria-hidden="true"><use href="#currency" /></svg>
+                    <label for="currency-selector" class="sr-only">{{ 'Currency'|trans }}</label>
+                    <select id="currency-selector" name="currency" class="currency_selector bg-transparent border-0 text-sm font-medium text-strata-strong focus:outline-none cursor-pointer">
+                        {% for code, name in currencies %}
+                            <option value="{{ code }}" class="bg-strata-base text-strata-default"{% if code == cart_currency.code %} selected="selected"{% endif %}>{{ code }} ({{ name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+
+            {% if cart.items|length > 0 %}
+                <a href="{{ 'order'|url(query: {'checkout': 1}) }}" class="strata-btn strata-btn-secondary inline-flex items-center gap-2">
+                    <svg class="size-4 text-strata-brand" aria-hidden="true"><use href="#shopping-cart" /></svg>
+                    <span>{{ 'Cart'|trans }}</span>
+                    <span class="inline-flex items-center justify-center rounded-full bg-strata-brand px-2 py-0.5 text-xs font-semibold text-white strata-tabular">{{ cart.items|length }}</span>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Checkout Flow Section (When request.checkout is set or cart items exist and user clicked checkout) #}
+    {% if request.checkout and cart.items|length > 0 %}
+        <div id="checkout-section" class="rounded-2xl bg-strata-base border border-strata-hairline p-6 shadow-xs space-y-6" data-animate="scale-in">
+            <div class="flex items-center justify-between pb-4 border-b border-strata-hairline">
+                <div class="flex items-center gap-2.5">
+                    <div class="size-9 rounded-lg bg-strata-brand/10 text-strata-brand flex items-center justify-center">
+                        <svg class="size-5" aria-hidden="true"><use href="#shopping-cart" /></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-strata-strong">{{ 'Your Shopping Cart'|trans }}</h2>
+                        <p class="text-xs text-strata-subtle">{{ 'Review items, apply promo codes, and complete your purchase.'|trans }}</p>
+                    </div>
+                </div>
+                <a href="{{ 'order'|url }}" class="strata-btn strata-btn-ghost strata-btn-sm text-xs">
+                    <svg class="size-3.5" aria-hidden="true"><use href="#plus" /></svg>
+                    <span>{{ 'Add More Products'|trans }}</span>
+                </a>
+            </div>
+
+            <div id="checkout" class="space-y-6">
+                {# Items Table #}
+                <div class="overflow-x-auto rounded-xl border border-strata-hairline">
+                    <table class="w-full text-sm text-strata-default">
+                        <thead>
+                            <tr class="bg-strata-tint border-b border-strata-line text-left text-xs font-semibold text-strata-subtle">
+                                <th class="py-3 px-4">{{ 'Product'|trans }}</th>
+                                <th class="py-3 px-4">{{ 'Billing Cycle'|trans }}</th>
+                                <th class="py-3 px-4 text-right">{{ 'Price'|trans }}</th>
+                                <th class="py-3 px-4 text-center w-12">{{ 'Action'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-strata-hairline">
+                            {% for i, item in cart.items %}
+                                <tr class="hover:bg-strata-elevated transition-colors">
+                                    <td class="py-3.5 px-4 font-medium text-strata-strong">
+                                        {{ item.title }}
+                                        {% if item.quantity > 1 %}
+                                            <span class="text-xs font-normal text-strata-subtle"> &times; {{ item.quantity }}</span>
+                                        {% endif %}
+                                        {% if item.setup_price != 0 %}
+                                            <div class="text-xs text-strata-subtle font-normal mt-0.5">
+                                                {{ 'Setup fee:'|trans }} {{ (item.setup_price * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3.5 px-4 text-strata-subtle">
+                                        {{ item.period ? item.period|period_title : '-' }}
+                                    </td>
+                                    <td class="py-3.5 px-4 text-right font-semibold text-strata-strong strata-tabular">
+                                        {% if item.discount_price %}
+                                            <del class="text-xs text-strata-inactive font-normal mr-1.5">{{ (item.total * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</del>
+                                            <span class="text-strata-success">{{ ((item.total - item.discount_price) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</span>
+                                        {% else %}
+                                            {{ (item.total * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3.5 px-4 text-center">
+                                        <a class="inline-flex items-center justify-center size-8 rounded-lg text-strata-subtle hover:text-strata-danger hover:bg-strata-danger-tint transition-colors cursor-pointer"
+                                           title="{{ 'Remove item'|trans }}"
+                                           {{ fb_api_link({href: 'cart/remove_item'|api_url(query: {id: item.id}, role: 'guest'), modal: {type: 'confirm', title: 'Are you sure?'|trans, content: 'Are you sure you want to remove this item from cart?'|trans}, reload: true}) }}>
+                                            <svg class="size-4" aria-hidden="true"><use href="#trash" /></svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {# Promo Code & Summary Grid #}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    {# Promo code block #}
+                    <div class="rounded-xl bg-strata-recessed border border-strata-hairline p-4 space-y-3">
+                        <div class="flex items-center gap-2 text-sm font-semibold text-strata-strong">
+                            <svg class="size-4 text-strata-brand" aria-hidden="true"><use href="#tag" /></svg>
+                            <span>{{ 'Promo Code'|trans }}</span>
+                        </div>
+                        {% if not cart.promocode %}
+                            <a href="#" id="show-promo-field" class="text-xs text-strata-brand hover:underline inline-block">{{ 'Have a coupon code?'|trans }}</a>
+                        {% endif %}
+                        <form method="post" action="{{ 'cart/apply_promo'|api_url(role: 'guest') }}" {{ fb_api_form({message: 'Promo Code Applied to Order'|trans, reload: true}) }}
+                              id="apply-promo" {% if not cart.promocode %}style="display:none"{% endif %} class="space-y-2">
+                            <div class="flex gap-2">
+                                <input type="text" name="promocode" id="promocode" value="{{ request.promocode|default(cart.promocode) }}"
+                                       placeholder="{{ 'Enter promo code'|trans }}"
+                                       class="flex-1 rounded-lg bg-strata-control border border-strata-line px-3 py-1.5 text-sm text-strata-default uppercase focus:outline-none focus:ring-2 focus:ring-strata-focus">
+                                {% if cart.promocode %}
+                                    <a class="strata-btn strata-btn-danger strata-btn-sm" href="{{ 'cart/remove_promo'|api_url(role: 'guest') }}" {{ fb_api_link({reload: true}) }}>{{ 'Remove'|trans }}</a>
+                                {% else %}
+                                    <button class="strata-btn strata-btn-primary strata-btn-sm" type="submit">{{ 'Apply'|trans }}</button>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+
+                    {# Totals & Checkout block #}
+                    <div class="rounded-xl bg-strata-recessed border border-strata-hairline p-5 space-y-4">
+                        <div class="space-y-2 text-sm">
+                            {% if cart.discount > 0 %}
+                                <div class="flex justify-between text-strata-subtle">
+                                    <span>{{ 'Subtotal:'|trans }}</span>
+                                    <span class="font-medium text-strata-default strata-tabular">{{ (cart.subtotal * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</span>
+                                </div>
+                                <div class="flex justify-between text-strata-success">
+                                    <span>{{ 'Discount:'|trans }}</span>
+                                    <span class="font-medium strata-tabular">- {{ (cart.discount * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</span>
+                                </div>
+                                {% for auto_promo in cart.auto_promos|default([]) %}
+                                    <div class="flex justify-between text-xs text-strata-subtle pl-2">
+                                        <span>{{ auto_promo.title }}</span>
+                                        <span class="strata-tabular">- {{ (auto_promo.discount * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</span>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% set tax_amount = 0 %}
+                            {% if client and client.client_is_taxable %}
+                                {% set tax_rate = client.invoice_get_tax_rate %}
+                                {% set tax_amount = cart.total * tax_rate / 100 %}
+                                <div class="flex justify-between text-strata-subtle">
+                                    <span>{{ 'VAT'|trans }} ({{ tax_rate }}%):</span>
+                                    <span class="font-medium text-strata-default strata-tabular">{{ (tax_amount * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</span>
+                                </div>
+                            {% endif %}
+
+                            <div class="pt-2 border-t border-strata-hairline flex items-baseline justify-between text-base font-bold text-strata-strong">
+                                <span>{{ 'Total:'|trans }}</span>
+                                <span class="text-2xl text-strata-brand strata-tabular">{{ ((cart.total + tax_amount) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}</span>
+                            </div>
+                        </div>
+
+                        {# Gateway Selection & Checkout Form #}
+                        <form method="post" action="{{ 'cart/checkout'|api_url }}" {{ fb_api_form({callback: 'onOrderCheckout'}) }} class="space-y-4 pt-2">
+                            {% set enough_in_balance = client ? (profile.balance ?? client.client_balance_get_total) >= cart.total : false %}
+                            {% if cart.total and not enough_in_balance %}
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-semibold text-strata-strong uppercase tracking-wider">{{ 'Payment Method'|trans }}</label>
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        {% set gateway_selected = false %}
+                                        {% for gtw in guest.invoice_gateways %}
+                                            {% if cart.currency.code in gtw.accepted_currencies and (gtw.allow_single or (cart.subscribable|default(false) and gtw.allow_recurrent)) %}
+                                                {% set gateway_input_id = 'order-gateway-' ~ gtw.id %}
+                                                <label class="relative flex items-center gap-2 rounded-xl border border-strata-line bg-strata-base p-3 cursor-pointer hover:border-strata-brand transition-colors has-[:checked]:border-strata-brand has-[:checked]:bg-strata-brand/5">
+                                                    <input type="radio" name="gateway_id" id="{{ gateway_input_id }}" value="{{ gtw.id }}" class="accent-strata-brand size-4" {{ not gateway_selected ? 'checked' : '' }} />
+                                                    {% if gtw.logo.logo %}
+                                                        <img src="{{ gtw.logo.logo }}" alt="{{ gtw.title }}" class="h-6 max-w-24 object-contain" />
+                                                    {% else %}
+                                                        <span class="text-xs font-semibold text-strata-strong truncate">{{ gtw.title }}</span>
+                                                    {% endif %}
+                                                </label>
+                                                {% set gateway_selected = true %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% elseif enough_in_balance %}
+                                <div class="rounded-lg bg-strata-success-tint border border-strata-success/20 p-3 text-xs text-strata-success">
+                                    {{ 'Total amount will be deducted from your account balance.'|trans }}
+                                </div>
+                            {% endif %}
+
+                            {% if settings.checkout_tos|default('0') == 'explicit' %}
+                                <div class="flex items-start gap-2 pt-2">
+                                    <input type="checkbox" id="tos-agree" required class="accent-strata-brand mt-0.5 rounded" />
+                                    <label for="tos-agree" class="text-xs text-strata-subtle">
+                                        {{ 'I agree to the'|trans }} <a href="{{ 'tos'|url }}" target="_blank" class="text-strata-brand hover:underline">{{ 'Terms of Service'|trans }}</a> {{ 'and'|trans }} <a href="{{ 'privacy-policy'|url }}" target="_blank" class="text-strata-brand hover:underline">{{ 'Privacy Policy'|trans }}</a>.
+                                    </label>
+                                </div>
+                            {% endif %}
+
+                            <div class="pt-2">
+                                <button id="checkoutButton" type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-strata-brand hover:bg-strata-brand-hover text-white font-medium px-4 py-2.5 text-sm transition-colors cursor-pointer shadow-xs{% if not client %} hidden{% endif %}">
+                                    <svg class="size-4" aria-hidden="true"><use href="#check" /></svg>
+                                    <span>{{ 'Complete Checkout'|trans }}</span>
+                                </button>
+                                <div id="loginMessage" class="space-y-2{% if client %} hidden{% endif %}">
+                                    <p class="text-xs text-strata-subtle text-center">{{ 'You must login or register before checking out.'|trans }}</p>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <a href="{{ 'login'|url(query: {'return': 'order?checkout=1'}) }}" class="strata-btn strata-btn-secondary strata-btn-sm justify-center">{{ 'Login'|trans }}</a>
+                                        <a href="{{ 'signup'|url(query: {'return': 'order?checkout=1'}) }}" class="strata-btn strata-btn-primary strata-btn-sm justify-center">{{ 'Register'|trans }}</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {# Payment HTML container for iframe / gateways #}
+            <div id="payment-html" class="hidden rounded-xl bg-strata-recessed border border-strata-hairline p-5">
+                <div id="payment-html-inner"></div>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Categories & Products Catalog Grid #}
+    {% set selected_category = request.category|default('') %}
+    {% set has_selected_category = false %}
+    {% for category in categories %}
+        {% if (category.id ~ '') == (selected_category ~ '') %}
+            {% set has_selected_category = true %}
+        {% endif %}
+    {% endfor %}
+
+    {% if categories|length > 0 %}
+        <div class="flex flex-wrap items-center gap-2" data-animate="fade-up" role="navigation" aria-label="{{ 'Product Categories'|trans }}">
+            <a href="{{ 'order'|url }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors {% if not has_selected_category %}bg-strata-brand text-white border-transparent shadow-xs{% else %}bg-strata-base border-strata-hairline text-strata-subtle hover:text-strata-strong hover:border-strata-line{% endif %}">
+                <span>{{ 'All Categories'|trans }}</span>
+                <span class="strata-tabular opacity-80">({{ categories|length }})</span>
+            </a>
+            {% for category in categories %}
+                {% set cat_products = category.products|default([]) %}
+                {% if cat_products|length > 0 %}
+                    {% set is_cat_active = (category.id ~ '') == (selected_category ~ '') %}
+                    <a href="{{ 'order'|url(query: {'category': category.id}) }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors {% if is_cat_active %}bg-strata-brand text-white border-transparent shadow-xs{% else %}bg-strata-base border-strata-hairline text-strata-subtle hover:text-strata-strong hover:border-strata-line{% endif %}">
+                        <span>{{ category.title }}</span>
+                        <span class="strata-tabular opacity-80">({{ cat_products|length }})</span>
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% for cat_idx, category in categories %}
+            {% set cat_products = category.products|sort((a, b) => a.priority <=> b.priority) %}
+            {% set matches_filter = (not has_selected_category) or ((category.id ~ '') == (selected_category ~ '')) %}
+            {% if cat_products|length > 0 and matches_filter %}
+                <div id="category-{{ category.id }}" class="space-y-4 scroll-mt-20" data-animate="fade-up">
+                    {# Category Header #}
+                    <div class="flex items-center justify-between border-b border-strata-hairline pb-3">
+                        <div>
+                            <h2 class="text-xl font-bold tracking-tight text-strata-strong">{{ category.title }}</h2>
+                            {% if category.description %}
+                                <div class="text-sm text-strata-subtle mt-0.5">{{ (category.description ?? '')|markdown_to_html }}</div>
+                            {% endif %}
+                        </div>
+                        <span class="inline-flex items-center rounded-full bg-strata-fill px-2.5 py-0.5 text-xs font-medium text-strata-subtle strata-tabular">
+                            {{ cat_products|length }} {{ 'Plans'|trans }}
+                        </span>
+                    </div>
+
+                    {# Product Cards Grid #}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" data-stagger>
+                        {% for product in cat_products %}
+                            <div data-stagger-item class="group relative rounded-2xl bg-strata-base border border-strata-hairline hover:border-strata-line hover:shadow-md transition-all duration-200 flex flex-col p-6">
+                                {# Icon & Badge #}
+                                <div class="flex items-start justify-between gap-3 mb-4">
+                                    <div class="size-11 rounded-xl bg-strata-fill group-hover:bg-strata-brand/10 group-hover:text-strata-brand text-strata-strong flex items-center justify-center transition-colors">
+                                        {% if product.icon_url %}
+                                            <img src="{{ product.icon_url }}" alt="" class="size-6 object-contain" />
+                                        {% else %}
+                                            <svg class="size-5" aria-hidden="true"><use href="#package" /></svg>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.pricing.type == 'free' %}
+                                        <span class="inline-flex items-center rounded-full bg-strata-success-tint px-2.5 py-0.5 text-xs font-medium text-strata-success border border-strata-success/20">
+                                            {{ 'Free'|trans }}
+                                        </span>
+                                    {% elseif product.pricing.type == 'once' %}
+                                        <span class="inline-flex items-center rounded-full bg-strata-fill px-2.5 py-0.5 text-xs font-medium text-strata-subtle border border-strata-hairline">
+                                            {{ 'One-time'|trans }}
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center rounded-full bg-strata-brand/10 px-2.5 py-0.5 text-xs font-medium text-strata-brand border border-strata-brand/20">
+                                            {{ 'Subscription'|trans }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                {# Product Title & Description #}
+                                <h3 class="text-lg font-semibold text-strata-strong group-hover:text-strata-brand transition-colors mb-2">
+                                    <a href="{{ 'order'|url }}/{{ product.slug|default(product.id) }}" class="focus:outline-none">
+                                        {{ product.title }}
+                                    </a>
+                                </h3>
+
+                                {% if product.description %}
+                                    <div class="text-sm text-strata-subtle line-clamp-3 mb-6 flex-1 leading-relaxed">
+                                        {{ (product.description ?? '')|markdown_to_html }}
+                                    </div>
+                                {% else %}
+                                    <div class="flex-1 mb-6"></div>
+                                {% endif %}
+
+                                {# Pricing & CTA Footer #}
+                                <div class="pt-4 border-t border-strata-hairline mt-auto space-y-4">
+                                    <div class="flex items-baseline justify-between gap-2">
+                                        <div>
+                                            {% if product.pricing.type == 'free' %}
+                                                <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular">{{ 0|format_currency(cart_currency.code) }}</span>
+                                            {% elseif product.pricing.type == 'once' %}
+                                                <div class="flex items-baseline gap-1.5">
+                                                    <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular">
+                                                        {{ ((product.pricing.once.price + product.pricing.once.setup) * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                                    </span>
+                                                    <span class="text-xs text-strata-subtle font-medium">{{ 'one-time'|trans }}</span>
+                                                </div>
+                                            {% elseif product.pricing.type == 'recurrent' %}
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs text-strata-subtle">{{ 'Starting from'|trans }}</span>
+                                                    <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular">
+                                                        {{ (product.price_starting_from * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                                    </span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <a href="{{ 'order'|url }}/{{ product.slug|default(product.id) }}" class="strata-btn strata-btn-primary w-full justify-center group-hover:bg-strata-brand-hover shadow-xs">
+                                        <span>{{ 'Configure & Order'|trans }}</span>
+                                        <svg class="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true"><use href="#arrow-right" /></svg>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        {# Fallback when categories are not configured #}
+        <div class="rounded-2xl bg-strata-base border border-strata-hairline p-12 text-center flex flex-col items-center justify-center">
+            <div class="size-12 rounded-full bg-strata-fill flex items-center justify-center text-strata-subtle mb-3">
+                <svg class="size-6" aria-hidden="true"><use href="#package" /></svg>
+            </div>
+            <h3 class="text-base font-semibold text-strata-strong mb-1">{{ 'No products available'|trans }}</h3>
+            <p class="text-sm text-strata-subtle max-w-sm">{{ 'There are currently no products listed in the catalog. Please check back later.'|trans }}</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block sidebar2 %}
+    {{ include('partial_currency.html.twig', ignore_missing: true) }}
+{% endblock %}
+
+{% block js %}
+{% autoescape "js" %}
+<script>
+    function resizeIframe(obj) {
+        if (obj && obj.contentWindow) {
+            obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
+        }
+        const loader = document.getElementById('loader-image');
+        if (loader) loader.style.display = 'none';
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const showPromoBtn = document.getElementById('show-promo-field');
+        const promoForm = document.getElementById('apply-promo');
+        if (showPromoBtn && promoForm) {
+            showPromoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                promoForm.style.display = 'block';
+                showPromoBtn.style.display = 'none';
+                document.getElementById('promocode')?.focus();
+            });
+        }
+    });
+
+    function onOrderCheckout(result) {
+        if (result.invoice_hash) {
+            FOSSBilling.api.guest.post('invoice/payment', { hash: result.invoice_hash, gateway_id: result.gateway_id, auto_redirect: true },
+                (r) => {
+                    const checkoutEl = document.getElementById('checkout');
+                    const paymentHtmlEl = document.getElementById('payment-html');
+                    if (r.iframe) {
+                        document.getElementById('payment-html-inner').innerHTML = r.result;
+                        if (checkoutEl) checkoutEl.style.display = 'none';
+                        if (paymentHtmlEl) paymentHtmlEl.classList.remove('hidden');
+                    } else {
+                        const link = '{{ "invoice/banklink"|url }}' + '/' + result.invoice_hash + '/' + result.gateway_id;
+                        document.getElementById('payment-html-inner').innerHTML = '<a href="' + link + '" target="_parent" id="redirect-to-gateway" class="strata-btn strata-btn-primary">{{ "Proceed to Payment Gateway"|trans }}</a>';
+                        if (checkoutEl) checkoutEl.style.display = 'none';
+                        if (paymentHtmlEl) paymentHtmlEl.classList.remove('hidden');
+                        document.getElementById('redirect-to-gateway')?.click();
+                    }
+                },
+                (error) => FOSSBilling.message(`${error.message} (${error.code})`, 'error'));
+        } else if (result.order_id) {
+            window.top.location.href = ('{{ "order/service/manage"|url }}' + '/' + result.order_id);
+        }
+    }
+</script>
+{% endautoescape %}
+{% endblock %}

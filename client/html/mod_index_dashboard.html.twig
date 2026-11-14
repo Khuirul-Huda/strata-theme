@@ -1,0 +1,485 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'dashboard' %}
+{% if client %}
+    {% set dashboard = client.index_get_dashboard %}
+    {% set profile = dashboard.profile %}
+{% endif %}
+
+{% block meta_title %}{{ 'Client Area'|trans }}{% endblock %}
+{% block page_header %}{{ 'Dashboard'|trans }}{% endblock %}
+
+{% block body_class %}dashboard{% endblock %}
+{% block breadcrumbs %}
+    {% if not settings.hide_dashboard_breadcrumb %}
+        <nav aria-label="{{ 'breadcrumb'|trans }}">
+            <ol class="strata-breadcrumb flex flex-wrap items-center gap-1.5 text-sm text-strata-subtle list-none m-0 p-0">
+                <li class="breadcrumb-item"><a class="hover:text-strata-strong transition-colors" href="{{ '/'|url }}">{{ 'Home'|trans }}</a></li>
+                <li class="text-strata-inactive" aria-hidden="true">/</li>
+                <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ 'Dashboard'|trans }}</li>
+            </ol>
+        </nav>
+    {% endif %}
+{% endblock %}
+
+{% import "macro_functions.html.twig" as mf %}
+
+{% block content %}
+    {{ render_widgets('client.index.dashboard.content.before') }}
+
+    {% if settings.showcase_enabled %}
+        <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 sm:p-6 mb-6 shadow-xs" data-animate="fade-up">
+            <div class="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full opacity-10 bg-strata-brand blur-2xl" aria-hidden="true"></div>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="prose prose-sm max-w-none text-strata-default">
+                    {{ (settings.showcase_text ?? '')|markdown_to_html }}
+                </div>
+                {% if (settings.showcase_button_url) and (settings.showcase_button_title) %}
+                    <div class="shrink-0">
+                        <a class="strata-btn strata-btn-primary" href="{{ settings.showcase_button_url }}">
+                            <span>{{ settings.showcase_button_title }}</span>
+                            <svg class="size-4" aria-hidden="true"><use href="#arrow-right" /></svg>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if client %}
+        {{ render_widgets('client.index.dashboard.client.before', { 'dashboard': dashboard, 'profile': profile }) }}
+
+        {% if dashboard.tickets.on_hold > 0 %}
+            <div class="space-y-3 mb-6" data-animate="fade-up">
+                {% for ticket in dashboard.recent_tickets %}
+                    {% if ticket.status == 'on_hold' %}
+                        <div class="strata-alert strata-alert-info flex items-center justify-between gap-3 shadow-xs">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <svg class="size-5 text-strata-info shrink-0" aria-hidden="true"><use href="#info" /></svg>
+                                <span class="text-sm truncate">Ticket <strong class="text-strata-strong">#{{ ticket.id }}</strong> was replied to {{ ticket.updated_at|timeago }} {{ 'ago'|trans }}.</span>
+                            </div>
+                            <a href="{{ "support/ticket/#{ticket.id}"|url }}" class="strata-btn strata-btn-sm strata-btn-secondary shrink-0">
+                                <span>{{ 'Reply'|trans }}</span>
+                                <svg class="size-3.5" aria-hidden="true"><use href="#arrow-right" /></svg>
+                            </a>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if dashboard.invoices.unpaid > 0 %}
+            <div class="strata-alert strata-alert-warning flex items-center justify-between gap-3 mb-6 shadow-xs" data-animate="fade-up">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <svg class="size-5 text-strata-warning shrink-0" aria-hidden="true"><use href="#receipt" /></svg>
+                    <span class="text-sm">
+                        {% if dashboard.invoices.unpaid == 1 %}
+                            {{ 'You have 1 unpaid invoice.'|trans }}
+                        {% else %}
+                            {{ 'You have %s unpaid invoices.'|trans|format(dashboard.invoices.unpaid) }}
+                        {% endif %}
+                    </span>
+                </div>
+                <a href="{{ 'invoice'|url }}" class="strata-btn strata-btn-sm strata-btn-primary shrink-0">
+                    <span>{{ 'Pay Invoices'|trans }}</span>
+                    <svg class="size-3.5" aria-hidden="true"><use href="#arrow-right" /></svg>
+                </a>
+            </div>
+        {% endif %}
+
+        {# 1. Top Bento KPI Row #}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-stagger>
+            {# KPI 1: Wallet Balance #}
+            <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Wallet Balance'|trans }}</span>
+                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center text-strata-subtle group-hover:bg-strata-brand/10 group-hover:text-strata-brand transition-colors">
+                            <svg class="size-4.5" aria-hidden="true"><use href="#wallet" /></svg>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular">
+                        {% if profile.currency is not null %}
+                            {{ profile.balance|format_currency(profile.currency) }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+                <a href="{{ 'client/balance'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                    <span>{{ 'Manage funds'|trans }}</span>
+                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                </a>
+            </div>
+
+            {# KPI 2: Active Services #}
+            <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Active Services'|trans }}</span>
+                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center text-strata-subtle group-hover:bg-strata-success-tint group-hover:text-strata-success transition-colors">
+                            <svg class="size-4.5" aria-hidden="true"><use href="#server" /></svg>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular" data-count-to="{{ dashboard.orders.active }}">{{ dashboard.orders.active }}</span>
+                        <span class="text-xs text-strata-subtle">/ {{ dashboard.orders.total }} {{ 'total'|trans }}</span>
+                    </div>
+                </div>
+                <a href="{{ 'order/service'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                    <span>{{ 'All Services'|trans }}</span>
+                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                </a>
+            </div>
+
+            {# KPI 3: Unpaid Invoices #}
+            <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Unpaid Invoices'|trans }}</span>
+                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center {% if dashboard.invoices.unpaid > 0 %}text-strata-warning bg-strata-warning-tint{% else %}text-strata-subtle{% endif %} transition-colors">
+                            <svg class="size-4.5" aria-hidden="true"><use href="#receipt" /></svg>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-2xl font-bold tracking-tight {% if dashboard.invoices.unpaid > 0 %}text-strata-warning{% else %}text-strata-strong{% endif %} strata-tabular" data-count-to="{{ dashboard.invoices.unpaid }}">{{ dashboard.invoices.unpaid }}</span>
+                        <span class="text-xs text-strata-subtle">/ {{ dashboard.invoices.total }} {{ 'total'|trans }}</span>
+                    </div>
+                </div>
+                <a href="{{ 'invoice'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                    <span>{{ 'All Invoices'|trans }}</span>
+                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                </a>
+            </div>
+
+            {# KPI 4: Open Tickets #}
+            <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-5 shadow-xs hover:border-strata-line transition-all group flex flex-col justify-between" data-stagger-item>
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-medium text-strata-subtle uppercase tracking-wider">{{ 'Open Tickets'|trans }}</span>
+                        <div class="size-9 rounded-xl bg-strata-fill flex items-center justify-center text-strata-subtle group-hover:bg-strata-info-tint group-hover:text-strata-info transition-colors">
+                            <svg class="size-4.5" aria-hidden="true"><use href="#ticket" /></svg>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-2xl font-bold tracking-tight text-strata-strong strata-tabular" data-count-to="{{ dashboard.tickets.open }}">{{ dashboard.tickets.open }}</span>
+                        {% if dashboard.tickets.on_hold > 0 %}
+                            <span class="text-xs text-strata-warning font-medium">({{ dashboard.tickets.on_hold }} {{ 'on hold'|trans }})</span>
+                        {% else %}
+                            <span class="text-xs text-strata-subtle">/ {{ dashboard.tickets.total }} {{ 'total'|trans }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <a href="{{ 'support'|url }}" class="inline-flex items-center gap-1 text-xs font-medium text-strata-subtle group-hover:text-strata-strong transition-colors mt-4 pt-3 border-t border-strata-hairline">
+                    <span>{{ 'Help & Support'|trans }}</span>
+                    <svg class="size-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true"><use href="#chevron-right" /></svg>
+                </a>
+            </div>
+        </div>
+
+        {# 2. Bento Detail Cards #}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6" data-stagger>
+            {# Detail Card 1: Profile Summary #}
+            <div class="bg-strata-base border border-strata-hairline rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between" data-stagger-item>
+                <div class="p-5 sm:p-6 border-b border-strata-hairline flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="size-8 rounded-lg bg-strata-fill flex items-center justify-center text-strata-subtle">
+                            <svg class="size-4" aria-hidden="true"><use href="#user" /></svg>
+                        </div>
+                        <h2 class="text-base font-semibold text-strata-strong tracking-tight">{{ 'Profile'|trans }}</h2>
+                    </div>
+                    <a class="strata-btn strata-btn-sm strata-btn-secondary" href="{{ 'client/profile'|url }}">
+                        <svg class="size-3.5 text-strata-subtle" aria-hidden="true"><use href="#pencil" /></svg>
+                        <span>{{ 'Update'|trans }}</span>
+                    </a>
+                </div>
+                <div class="p-5 sm:p-6 space-y-3.5 text-sm">
+                    <div class="flex items-center justify-between py-1.5 border-b border-strata-hairline">
+                        <span class="text-strata-subtle">{{ 'Client ID'|trans }}</span>
+                        <span class="font-mono text-xs font-medium text-strata-strong px-2 py-0.5 rounded bg-strata-fill">#{{ profile.id }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-1.5 border-b border-strata-hairline">
+                        <span class="text-strata-subtle">{{ 'Email'|trans }}</span>
+                        <span class="font-medium text-strata-strong truncate max-w-xs">{{ profile.email }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-1.5 border-b border-strata-hairline">
+                        <span class="text-strata-subtle">{{ 'Name'|trans }}</span>
+                        <span class="font-medium text-strata-strong">{{ profile.first_name }} {{ profile.last_name }}{% if profile.company %} ({{ profile.company }}){% endif %}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-1.5">
+                        <span class="text-strata-subtle">{{ 'Balance'|trans }}</span>
+                        <span class="font-semibold text-strata-strong strata-tabular">
+                            {% if profile.currency is not null %}
+                                {{ profile.balance|format_currency(profile.currency) }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="p-4 bg-strata-tint border-t border-strata-hairline flex items-center justify-between gap-3 text-xs">
+                    <span class="text-strata-subtle">{{ 'Account active'|trans }}</span>
+                    <a href="{{ 'client/profile'|url }}" class="font-medium text-strata-brand hover:underline inline-flex items-center gap-1">
+                        <span>{{ 'Manage Profile'|trans }}</span>
+                        <svg class="size-3" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    </a>
+                </div>
+            </div>
+
+            {# Detail Card 2: Invoices Breakdown #}
+            <div class="bg-strata-base border border-strata-hairline rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between" data-stagger-item>
+                <div class="p-5 sm:p-6 border-b border-strata-hairline flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="size-8 rounded-lg bg-strata-fill flex items-center justify-center text-strata-subtle">
+                            <svg class="size-4" aria-hidden="true"><use href="#receipt" /></svg>
+                        </div>
+                        <h2 class="text-base font-semibold text-strata-strong tracking-tight">{{ 'Invoices'|trans }}</h2>
+                    </div>
+                    <a class="strata-btn strata-btn-sm strata-btn-secondary" href="{{ 'invoice'|url }}">
+                        <span>{{ 'All Invoices'|trans }}</span>
+                        <svg class="size-3.5 text-strata-subtle" aria-hidden="true"><use href="#arrow-right" /></svg>
+                    </a>
+                </div>
+                <div class="p-5 sm:p-6 space-y-3.5 text-sm">
+                    <div class="flex items-center justify-between py-1.5 border-b border-strata-hairline">
+                        <span class="text-strata-subtle">{{ 'Total'|trans }}</span>
+                        <span class="font-semibold text-strata-strong strata-tabular">{{ dashboard.invoices.total }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-1.5 border-b border-strata-hairline">
+                        <span class="text-strata-subtle">{{ 'Paid'|trans }}</span>
+                        <span class="font-semibold text-strata-success strata-tabular">{{ dashboard.invoices.paid }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-1.5">
+                        <span class="text-strata-subtle">{{ 'Unpaid'|trans }}</span>
+                        <span class="font-semibold {% if dashboard.invoices.unpaid > 0 %}text-strata-warning{% else %}text-strata-strong{% endif %} strata-tabular">{{ dashboard.invoices.unpaid }}</span>
+                    </div>
+                </div>
+                <div class="p-4 bg-strata-tint border-t border-strata-hairline flex items-center justify-between gap-3 text-xs">
+                    <span class="text-strata-subtle">{{ 'Billing & Payment records'|trans }}</span>
+                    <a href="{{ 'invoice'|url }}" class="font-medium text-strata-brand hover:underline inline-flex items-center gap-1">
+                        <span>{{ 'View Statements'|trans }}</span>
+                        <svg class="size-3" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    </a>
+                </div>
+            </div>
+
+            {# Detail Card 3: Recent Orders / Services #}
+            <div class="bg-strata-base border border-strata-hairline rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between" data-stagger-item>
+                <div class="p-5 sm:p-6 border-b border-strata-hairline flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="size-8 rounded-lg bg-strata-fill flex items-center justify-center text-strata-subtle">
+                            <svg class="size-4" aria-hidden="true"><use href="#shopping-cart" /></svg>
+                        </div>
+                        <h2 class="text-base font-semibold text-strata-strong tracking-tight">{{ 'Recent Orders'|trans }}</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a class="strata-btn strata-btn-sm strata-btn-primary order-button" href="{{ 'order'|url }}">
+                            <svg class="size-3.5" aria-hidden="true"><use href="#plus" /></svg>
+                            <span>{{ 'New Order'|trans }}</span>
+                        </a>
+                        <a class="strata-btn strata-btn-sm strata-btn-secondary" href="{{ 'order/service'|url }}">
+                            <span>{{ 'All Orders'|trans }}</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="p-2 sm:p-3 flex-1">
+                    {% if dashboard.recent_orders %}
+                        <div class="divide-y divide-strata-hairline">
+                            {% for order in dashboard.recent_orders %}
+                                <a href="{{ "order/service/manage/#{order.id}"|url }}"
+                                   class="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-strata-fill-hover transition-colors group">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-mono text-xs font-semibold text-strata-strong">#{{ order.id }}</span>
+                                            <span class="text-sm font-medium text-strata-default group-hover:text-strata-strong truncate">{{ order.title|truncate(45) }}</span>
+                                        </div>
+                                        <div class="text-xs text-strata-subtle mt-0.5" title="{{ order.updated_at|format_date }}">
+                                            {{ order.updated_at|timeago }} {{ 'ago'|trans }}
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0 flex items-center gap-2">
+                                        {{ mf.status_badge(order.status, 'order') }}
+                                        <svg class="size-4 text-strata-subtle group-hover:text-strata-strong group-hover:translate-x-0.5 transition-all" aria-hidden="true"><use href="#chevron-right" /></svg>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="py-10 px-4 text-center">
+                            <div class="size-10 rounded-xl bg-strata-fill text-strata-subtle flex items-center justify-center mx-auto mb-2">
+                                <svg class="size-5" aria-hidden="true"><use href="#package" /></svg>
+                            </div>
+                            <p class="text-sm text-strata-subtle">{{ 'No recent orders'|trans }}</p>
+                            <a href="{{ 'order'|url }}" class="strata-btn strata-btn-sm strata-btn-secondary mt-3">
+                                <span>{{ 'Place your first order'|trans }}</span>
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="p-4 bg-strata-tint border-t border-strata-hairline flex items-center justify-between gap-3 text-xs">
+                    <span class="text-strata-subtle strata-tabular">{{ dashboard.orders.active }} {{ 'active'|trans }} &bull; {{ dashboard.orders.expiring }} {{ 'expiring'|trans }}</span>
+                    <a href="{{ 'order/service'|url }}" class="font-medium text-strata-brand hover:underline inline-flex items-center gap-1">
+                        <span>{{ 'View all services'|trans }}</span>
+                        <svg class="size-3" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    </a>
+                </div>
+            </div>
+
+            {# Detail Card 4: Recent Support Tickets #}
+            <div class="bg-strata-base border border-strata-hairline rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between" data-stagger-item>
+                <div class="p-5 sm:p-6 border-b border-strata-hairline flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="size-8 rounded-lg bg-strata-fill flex items-center justify-center text-strata-subtle">
+                            <svg class="size-4" aria-hidden="true"><use href="#ticket" /></svg>
+                        </div>
+                        <h2 class="text-base font-semibold text-strata-strong tracking-tight">{{ 'Support Tickets'|trans }}</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a class="strata-btn strata-btn-sm strata-btn-primary" href="{{ 'support'|url(query: { 'ticket': 1 }) }}">
+                            <svg class="size-3.5" aria-hidden="true"><use href="#plus" /></svg>
+                            <span>{{ 'New Ticket'|trans }}</span>
+                        </a>
+                        <a class="strata-btn strata-btn-sm strata-btn-secondary" href="{{ 'support'|url }}">
+                            <span>{{ 'All Tickets'|trans }}</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="p-2 sm:p-3 flex-1">
+                    {% if dashboard.recent_tickets %}
+                        <div class="divide-y divide-strata-hairline">
+                            {% for ticket in dashboard.recent_tickets %}
+                                <a href="{{ "support/ticket/#{ticket.id}"|url }}"
+                                   class="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-strata-fill-hover transition-colors group">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-mono text-xs font-semibold text-strata-strong">#{{ ticket.id }}</span>
+                                            <span class="text-sm font-medium text-strata-default group-hover:text-strata-strong truncate">{{ ticket.subject|truncate(45) }}</span>
+                                        </div>
+                                        <div class="text-xs text-strata-subtle mt-0.5" title="{{ ticket.updated_at|format_date }}">
+                                            {{ ticket.updated_at|timeago }} {{ 'ago'|trans }}
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0 flex items-center gap-2">
+                                        {{ mf.status_badge(ticket.status, 'ticket') }}
+                                        <svg class="size-4 text-strata-subtle group-hover:text-strata-strong group-hover:translate-x-0.5 transition-all" aria-hidden="true"><use href="#chevron-right" /></svg>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="py-10 px-4 text-center">
+                            <div class="size-10 rounded-xl bg-strata-fill text-strata-subtle flex items-center justify-center mx-auto mb-2">
+                                <svg class="size-5" aria-hidden="true"><use href="#ticket" /></svg>
+                            </div>
+                            <p class="text-sm text-strata-subtle">{{ 'No recent support tickets'|trans }}</p>
+                            <a href="{{ 'support'|url(query: { 'ticket': 1 }) }}" class="strata-btn strata-btn-sm strata-btn-secondary mt-3">
+                                <span>{{ 'Open a ticket'|trans }}</span>
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="p-4 bg-strata-tint border-t border-strata-hairline flex items-center justify-between gap-3 text-xs">
+                    <span class="text-strata-subtle strata-tabular">{{ dashboard.tickets.open }} {{ 'open'|trans }} &bull; {{ dashboard.tickets.on_hold }} {{ 'on hold'|trans }}</span>
+                    <a href="{{ 'support'|url }}" class="font-medium text-strata-brand hover:underline inline-flex items-center gap-1">
+                        <span>{{ 'View all tickets'|trans }}</span>
+                        <svg class="size-3" aria-hidden="true"><use href="#chevron-right" /></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {{ render_widgets('client.index.dashboard.client.after', { 'dashboard': dashboard, 'profile': profile }) }}
+    {% else %}
+        {{ render_widgets('client.index.dashboard.guest.before') }}
+
+        {# Guest Public Landing Bento Cards #}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6" data-stagger>
+            {# Guest Card 1: Account / Portal #}
+            <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-6 shadow-xs flex flex-col justify-between" data-stagger-item>
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                <div>
+                    <div class="size-11 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center mb-4">
+                        <svg class="size-5" aria-hidden="true"><use href="#user" /></svg>
+                    </div>
+                    <h2 class="text-lg font-semibold text-strata-strong tracking-tight">{{ 'Client Portal'|trans }}</h2>
+                    <p class="text-sm text-strata-subtle mt-1.5 leading-relaxed">{{ 'You are currently logged out. Access your services, invoices, and support tickets by logging in.'|trans }}</p>
+                </div>
+                <div class="flex items-center gap-3 mt-6 pt-5 border-t border-strata-hairline">
+                    <a class="strata-btn strata-btn-primary flex-1 text-center justify-center" href="{{ 'login'|url }}">
+                        <svg class="size-4" aria-hidden="true"><use href="#sign-in" /></svg>
+                        <span>{{ 'Login'|trans }}</span>
+                    </a>
+                    <a class="strata-btn strata-btn-secondary flex-1 text-center justify-center" href="{{ 'signup'|url }}">
+                        <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#user" /></svg>
+                        <span>{{ 'Register'|trans }}</span>
+                    </a>
+                </div>
+            </div>
+
+            {# Guest Card 2: Orders / Catalog #}
+            <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-6 shadow-xs flex flex-col justify-between" data-stagger-item>
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                <div>
+                    <div class="size-11 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center mb-4">
+                        <svg class="size-5" aria-hidden="true"><use href="#shopping-cart" /></svg>
+                    </div>
+                    <h2 class="text-lg font-semibold text-strata-strong tracking-tight">{{ 'Order'|trans }}</h2>
+                    <p class="text-sm text-strata-subtle mt-1.5 leading-relaxed">{{ 'Order new products and services'|trans }}. {{ 'Explore our comprehensive solutions tailored for your business needs.'|trans }}</p>
+                </div>
+                <div class="flex items-center gap-3 mt-6 pt-5 border-t border-strata-hairline">
+                    <a class="strata-btn strata-btn-primary flex-1 text-center justify-center" href="{{ 'order'|url }}">
+                        <svg class="size-4" aria-hidden="true"><use href="#shopping-cart" /></svg>
+                        <span>{{ 'Order'|trans }}</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if guest.extension_is_on({"module":"news"}) %}
+                {# Guest Card 3: News #}
+                <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-6 shadow-xs flex flex-col justify-between" data-stagger-item>
+                    <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                    <div>
+                        <div class="size-11 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center mb-4">
+                            <svg class="size-5" aria-hidden="true"><use href="#news" /></svg>
+                        </div>
+                        <h2 class="text-lg font-semibold text-strata-strong tracking-tight">{{ 'News'|trans }}</h2>
+                        <p class="text-sm text-strata-subtle mt-1.5 leading-relaxed">{{ 'Latest news and announcements'|trans }}. {{ 'Stay updated with product releases, maintenance notices, and company updates.'|trans }}</p>
+                    </div>
+                    <div class="flex items-center gap-3 mt-6 pt-5 border-t border-strata-hairline">
+                        <a class="strata-btn strata-btn-secondary flex-1 text-center justify-center" href="{{ 'news'|url }}">
+                            <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#news" /></svg>
+                            <span>{{ 'Announcements'|trans }}</span>
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if guest.support_kb_enabled() %}
+                {# Guest Card 4: Knowledge Base #}
+                <div class="relative overflow-hidden bg-strata-base border border-strata-hairline rounded-2xl p-6 shadow-xs flex flex-col justify-between" data-stagger-item>
+                    <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-strata-line to-transparent" aria-hidden="true"></div>
+                    <div>
+                        <div class="size-11 rounded-xl bg-strata-brand/10 text-strata-brand border border-strata-brand/15 flex items-center justify-center mb-4">
+                            <svg class="size-5" aria-hidden="true"><use href="#book" /></svg>
+                        </div>
+                        <h2 class="text-lg font-semibold text-strata-strong tracking-tight">{{ 'Knowledge Base'|trans }}</h2>
+                        <p class="text-sm text-strata-subtle mt-1.5 leading-relaxed">{{ 'Find answers to frequent questions'|trans }}. {{ 'Browse through our tutorials, guides, and documentation to solve common problems.'|trans }}</p>
+                    </div>
+                    <div class="flex items-center gap-3 mt-6 pt-5 border-t border-strata-hairline">
+                        <a class="strata-btn strata-btn-secondary flex-1 text-center justify-center" href="{{ 'support/kb'|url }}">
+                            <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#book" /></svg>
+                            <span>{{ 'Knowledge Base'|trans }}</span>
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {{ render_widgets('client.index.dashboard.guest.after') }}
+    {% endif %}
+
+    {{ render_widgets('client.index.dashboard.content.after') }}
+{% endblock %}

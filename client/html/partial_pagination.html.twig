@@ -1,0 +1,69 @@
+{% if list.pages > 1 %}
+    {% set url = url|default(guest.system_current_url|split('?')|first) %}
+    {% set pageParam = page_param|default('page') %}
+    {% set hash = hash|default('') %}
+    {% set currentPageRaw = request.(pageParam)|default(1) %}
+    {% if currentPageRaw matches '/^\\d+$/' %}
+        {% set currentPage = currentPageRaw %}
+    {% else %}
+        {% set currentPage = 1 %}
+    {% endif %}
+
+    {% set paginator = guest.system_paginator({ 'total': list.total, 'page_param': pageParam, (pageParam): currentPage, 'per_page': list.per_page }) %}
+
+    {# Removing current page parameter from the request to avoid duplication #}
+    {% set safeRequest = request|merge({ (pageParam): null }) %}
+    {% set filteredRequest = safeRequest|filter(v => v is not null) %}
+    <nav class="flex justify-center mt-4" aria-label="{{ 'Pagination'|trans }}">
+        <ul class="pagination inline-flex flex-wrap items-center gap-1 rounded-xl bg-strata-base border border-strata-hairline p-1 shadow-xs list-none m-0">
+            <li class="page-item{% if currentPage == 1 %} opacity-40 pointer-events-none{% endif %}">
+                <a class="page-link inline-flex items-center justify-center size-8 rounded-lg text-sm text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover transition-colors"
+                   href="{{ url|url(query: filteredRequest|merge({ (pageParam): 1 })) ~ hash }}"
+                   aria-label="{{ 'First'|trans }}"
+                   {% if currentPage == 1 %}aria-disabled="true" tabindex="-1"{% endif %}>
+                    <svg class="size-4" aria-hidden="true"><use href="#chevrons-left" /></svg>
+                </a>
+            </li>
+
+            <li class="page-item{% if currentPage == 1 %} opacity-40 pointer-events-none{% endif %}">
+                <a class="page-link inline-flex items-center justify-center size-8 rounded-lg text-sm text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover transition-colors"
+                   href="{{ url|url(query: filteredRequest|merge({ (pageParam): currentPage - 1 })) ~ hash }}"
+                   aria-label="{{ 'Previous'|trans }}"
+                   rel="prev"
+                   {% if currentPage == 1 %}aria-disabled="true" tabindex="-1"{% endif %}>
+                    <svg class="size-4" aria-hidden="true"><use href="#chevron-left" /></svg>
+                </a>
+            </li>
+
+            {% for i in 1..list.pages %}
+                <li class="page-item{% if i == currentPage %} active{% endif %}">
+                    {% if i == currentPage or (not currentPage and i == 1) %}
+                        <span class="page-link inline-flex items-center justify-center min-w-8 h-8 px-2.5 rounded-lg text-sm font-medium bg-strata-brand text-white tabular-nums" aria-current="page">{{ i }}</span>
+                    {% else %}
+                        <a class="page-link inline-flex items-center justify-center min-w-8 h-8 px-2.5 rounded-lg text-sm text-strata-default hover:text-strata-strong hover:bg-strata-fill-hover transition-colors tabular-nums"
+                           href="{{ url|url(query: filteredRequest|merge({ (pageParam): i })) ~ hash }}">{{ i }}</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+
+            <li class="page-item{% if currentPage == list.pages %} opacity-40 pointer-events-none{% endif %}">
+                <a class="page-link inline-flex items-center justify-center size-8 rounded-lg text-sm text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover transition-colors"
+                   href="{{ url|url(query: filteredRequest|merge({ (pageParam): currentPage + 1 })) ~ hash }}"
+                   aria-label="{{ 'Next'|trans }}"
+                   rel="next"
+                   {% if currentPage == list.pages %}aria-disabled="true" tabindex="-1"{% endif %}>
+                    <svg class="size-4" aria-hidden="true"><use href="#chevron-right" /></svg>
+                </a>
+            </li>
+
+            <li class="page-item{% if currentPage == list.pages %} opacity-40 pointer-events-none{% endif %}">
+                <a class="page-link inline-flex items-center justify-center size-8 rounded-lg text-sm text-strata-subtle hover:text-strata-strong hover:bg-strata-fill-hover transition-colors"
+                   href="{{ url|url(query: filteredRequest|merge({ (pageParam): list.pages })) ~ hash }}"
+                   aria-label="{{ 'Last'|trans }}"
+                   {% if currentPage == list.pages %}aria-disabled="true" tabindex="-1"{% endif %}>
+                    <svg class="size-4" aria-hidden="true"><use href="#chevrons-right" /></svg>
+                </a>
+            </li>
+        </ul>
+    </nav>
+{% endif %}

@@ -1,0 +1,19 @@
+{
+  "name": "Strata (Client Area)",
+  "version": "1.0.0",
+  "description": "Modern, animated client area theme built with Tailwind CSS v4 and Bun",
+  "icon": "screenshot.jpg",
+  "author": "FOSSBilling Community",
+  "author_url": "https://www.fossbilling.org/",
+  "markdown_attributes": {
+    "\\League\\CommonMark\\Extension\\Table\\Table": {
+      "class": "strata-table"
+    },
+    "\\League\\CommonMark\\Extension\\CommonMark\\Node\\Inline\\Image": {
+      "class": "max-w-full h-auto rounded-lg"
+    },
+    "\\League\\CommonMark\\Extension\\CommonMark\\Node\\Block\\BlockQuote": {
+      "class": "strata-blockquote"
+    }
+  }
+}

@@ -1,0 +1,355 @@
+{% extends request.ajax ? "layout_blank.html.twig" : "layout_default.html.twig" %}
+{% set active_menu = 'invoices' %}
+
+{% import "macro_functions.html.twig" as mf %}
+
+{% block meta_title %}{{ 'Invoice Management'|trans }}{% endblock %}
+{% block page_header %}{{ 'Invoice Management'|trans }}{% endblock %}
+
+{% block body_class %}invoice-index{% endblock %}
+{% block breadcrumb %}
+    <li class="active breadcrumb-item text-strata-strong font-medium" aria-current="page">{{ 'Invoices'|trans }}</li>
+{% endblock %}
+
+{% block content %}
+    {{ render_widgets('client.invoice.index.before') }}
+
+    {% set unpaid_invoices = client.invoice_get_list({"status":"unpaid", "per_page":10, "page":request.page}) %}
+    {% set paid_invoices = client.invoice_get_list({"per_page":10, "page":request.page, "status":"paid"}) %}
+    {% set refunded_invoices = client.invoice_get_list({"per_page":10, "page":request.page, "status":"refunded"}) %}
+    {% set canceled_invoices = client.invoice_get_list({"per_page":10, "page":request.page, "status":"canceled"}) %}
+
+    <div class="space-y-6" data-animate="fade-up">
+        <!-- Page Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-strata-strong">{{ 'Invoices'|trans }}</h1>
+                <p class="text-sm text-strata-subtle mt-1">
+                    {{ 'All of your invoices can be found here. You can choose to see unpaid, paid, refunded, or canceled invoices by clicking the corresponding button.'|trans }}
+                </p>
+            </div>
+            {% if unpaid_invoices.total > 0 %}
+                <div class="shrink-0 flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-strata-danger-tint text-strata-danger border border-strata-danger/20">
+                        <span class="size-2 rounded-full bg-strata-danger animate-pulse" aria-hidden="true"></span>
+                        <span class="strata-tabular">{{ unpaid_invoices.total }}</span>
+                        <span>{{ (unpaid_invoices.total == 1 ? 'Unpaid invoice' : 'Unpaid invoices')|trans }}</span>
+                    </span>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Invoices Card with Tabs -->
+        <div class="strata-card">
+            <!-- Tabs Navigation -->
+            <div class="border-b border-strata-hairline px-4 sm:px-6 pt-3 bg-strata-base">
+                <nav class="nav nav-tabs border-0 flex items-center gap-2 -mb-px overflow-x-auto" id="invoice-tab" role="tablist" data-tab-list>
+                    <button class="nav-link active inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer"
+                            id="unpaid-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#nav-unpaid"
+                            data-strata-tab="#nav-unpaid"
+                            type="button"
+                            role="tab"
+                            aria-controls="nav-unpaid"
+                            aria-selected="true">
+                        <svg class="size-4 text-strata-warning" aria-hidden="true"><use href="#clock" /></svg>
+                        <span>{{ 'Unpaid'|trans }}</span>
+                        {% if unpaid_invoices.total %}
+                            <span class="strata-badge strata-badge-danger strata-tabular text-xs">{{ unpaid_invoices.total }}</span>
+                        {% endif %}
+                    </button>
+
+                    <button class="nav-link inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer"
+                            id="paid-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#nav-paid"
+                            data-strata-tab="#nav-paid"
+                            type="button"
+                            role="tab"
+                            aria-controls="nav-paid"
+                            aria-selected="false">
+                        <svg class="size-4 text-strata-success" aria-hidden="true"><use href="#check-circle" /></svg>
+                        <span>{{ 'Paid'|trans }}</span>
+                        {% if paid_invoices.total %}
+                            <span class="strata-badge strata-badge-neutral strata-tabular text-xs">{{ paid_invoices.total }}</span>
+                        {% endif %}
+                    </button>
+
+                    <button class="nav-link inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer"
+                            id="refunded-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#nav-refunded"
+                            data-strata-tab="#nav-refunded"
+                            type="button"
+                            role="tab"
+                            aria-controls="nav-refunded"
+                            aria-selected="false">
+                        <svg class="size-4 text-strata-info" aria-hidden="true"><use href="#arrows-exchange" /></svg>
+                        <span>{{ 'Refunded'|trans }}</span>
+                        {% if refunded_invoices.total %}
+                            <span class="strata-badge strata-badge-info strata-tabular text-xs">{{ refunded_invoices.total }}</span>
+                        {% endif %}
+                    </button>
+
+                    <button class="nav-link inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer"
+                            id="canceled-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#nav-canceled"
+                            data-strata-tab="#nav-canceled"
+                            type="button"
+                            role="tab"
+                            aria-controls="nav-canceled"
+                            aria-selected="false">
+                        <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#x-circle" /></svg>
+                        <span>{{ 'Canceled'|trans }}</span>
+                        {% if canceled_invoices.total %}
+                            <span class="strata-badge strata-badge-neutral strata-tabular text-xs">{{ canceled_invoices.total }}</span>
+                        {% endif %}
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="nav-tabContent">
+                <!-- Unpaid Invoices -->
+                <div class="tab-pane active" id="nav-unpaid" role="tabpanel" aria-labelledby="unpaid-tab" tabindex="0">
+                    <div class="overflow-x-auto">
+                        <table class="strata-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'Invoice'|trans }}</th>
+                                    <th>{{ 'Invoice Date'|trans }}</th>
+                                    <th>{{ 'Due Date'|trans }}</th>
+                                    <th>{{ 'Status'|trans }}</th>
+                                    <th class="text-end">{{ 'Total'|trans }}</th>
+                                    <th class="text-end">{{ 'Actions'|trans }}</th>
+                                </tr>
+                            </thead>
+                            <tbody data-stagger>
+                            {% for i, invoice in unpaid_invoices.list %}
+                                <tr data-stagger-item>
+                                    <td class="font-medium">
+                                        <a href='{{ "invoice/#{invoice.hash}"|url }}' class="text-strata-link hover:underline inline-flex items-center gap-1.5 font-semibold">
+                                            <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#receipt" /></svg>
+                                            <span>{% if invoice.debit_note_for_invoice_id %}{{ 'Debit Note'|trans }}{% else %}{{ 'Invoice'|trans }}{% endif %}</span>
+                                            <span class="strata-tabular">#{{ invoice.serie_nr }}</span>
+                                        </a>
+                                    </td>
+                                    <td class="strata-tabular text-strata-subtle">{{ invoice.created_at|format_date }}</td>
+                                    <td class="strata-tabular text-strata-danger font-medium">{{ invoice.due_at|format_date }}</td>
+                                    <td>{{ mf.status_badge(invoice.status, 'invoice') }}</td>
+                                    <td class="text-end font-semibold text-strata-strong strata-tabular">
+                                        {{ invoice.total|format_currency(invoice.currency ?? default_currency) }}
+                                    </td>
+                                    <td class="text-end">
+                                        <a class="strata-btn strata-btn-primary strata-btn-sm" href='{{ "invoice/#{invoice.hash}"|url }}'>
+                                            <svg class="size-3.5" aria-hidden="true"><use href="#credit-card" /></svg>
+                                            <span>{{ 'Pay'|trans }}</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="py-12 px-4 text-center">
+                                        <div class="flex flex-col items-center justify-center gap-2">
+                                            <div class="size-10 rounded-full bg-strata-fill flex items-center justify-center text-strata-subtle">
+                                                <svg class="size-5" aria-hidden="true"><use href="#receipt" /></svg>
+                                            </div>
+                                            <p class="text-sm font-medium text-strata-strong">{{ 'No unpaid invoices'|trans }}</p>
+                                            <p class="text-xs text-strata-subtle">{{ 'All your invoices are settled and up to date.'|trans }}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if unpaid_invoices.pages > 1 %}
+                        <div class="p-4 border-t border-strata-hairline">
+                            {{ include('partial_pagination.html.twig', { 'list': unpaid_invoices, 'url': 'invoice' }) }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Paid Invoices -->
+                <div class="tab-pane" id="nav-paid" role="tabpanel" aria-labelledby="paid-tab" tabindex="0" hidden>
+                    <div class="overflow-x-auto">
+                        <table class="strata-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'Invoice'|trans }}</th>
+                                    <th>{{ 'Invoice Date'|trans }}</th>
+                                    <th>{{ 'Paid Date'|trans }}</th>
+                                    <th>{{ 'Status'|trans }}</th>
+                                    <th class="text-end">{{ 'Total'|trans }}</th>
+                                    <th class="text-end">{{ 'Actions'|trans }}</th>
+                                </tr>
+                            </thead>
+                            <tbody data-stagger>
+                            {% for i, invoice in paid_invoices.list %}
+                                <tr data-stagger-item>
+                                    <td class="font-medium">
+                                        <a href='{{ "invoice/#{invoice.hash}"|url }}' class="text-strata-link hover:underline inline-flex items-center gap-1.5 font-semibold">
+                                            <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#receipt" /></svg>
+                                            <span>{% if invoice.debit_note_for_invoice_id %}{{ 'Debit Note'|trans }}{% else %}{{ 'Invoice'|trans }}{% endif %}</span>
+                                            <span class="strata-tabular">#{{ invoice.serie_nr }}</span>
+                                        </a>
+                                    </td>
+                                    <td class="strata-tabular text-strata-subtle">{{ invoice.created_at|format_date }}</td>
+                                    <td class="strata-tabular text-strata-subtle">{{ invoice.paid_at|format_date }}</td>
+                                    <td>{{ mf.status_badge(invoice.status, 'invoice') }}</td>
+                                    <td class="text-end font-semibold text-strata-strong strata-tabular">
+                                        {{ invoice.total|format_currency(invoice.currency ?? default_currency) }}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href='{{ "invoice/#{invoice.hash}"|url }}' class="strata-btn strata-btn-secondary strata-btn-sm">
+                                            <svg class="size-3.5" aria-hidden="true"><use href="#eye" /></svg>
+                                            <span>{{ 'View'|trans }}</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="py-12 px-4 text-center">
+                                        <div class="flex flex-col items-center justify-center gap-2">
+                                            <div class="size-10 rounded-full bg-strata-fill flex items-center justify-center text-strata-subtle">
+                                                <svg class="size-5" aria-hidden="true"><use href="#receipt" /></svg>
+                                            </div>
+                                            <p class="text-sm font-medium text-strata-strong">{{ 'The list is empty'|trans }}</p>
+                                            <p class="text-xs text-strata-subtle">{{ 'You do not have any paid invoices yet.'|trans }}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if paid_invoices.pages > 1 %}
+                        <div class="p-4 border-t border-strata-hairline">
+                            {{ include('partial_pagination.html.twig', { 'list': paid_invoices, 'url': 'invoice', 'hash': '#nav-paid' }) }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Refunded Invoices -->
+                <div class="tab-pane" id="nav-refunded" role="tabpanel" aria-labelledby="refunded-tab" tabindex="0" hidden>
+                    <div class="overflow-x-auto">
+                        <table class="strata-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'Invoice'|trans }}</th>
+                                    <th>{{ 'Invoice Date'|trans }}</th>
+                                    <th>{{ 'Status'|trans }}</th>
+                                    <th class="text-end">{{ 'Total'|trans }}</th>
+                                    <th class="text-end">{{ 'Actions'|trans }}</th>
+                                </tr>
+                            </thead>
+                            <tbody data-stagger>
+                            {% for i, invoice in refunded_invoices.list %}
+                                <tr data-stagger-item>
+                                    <td class="font-medium">
+                                        <a href='{{ "invoice/#{invoice.hash}"|url }}' class="text-strata-link hover:underline inline-flex items-center gap-1.5 font-semibold">
+                                            <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#receipt" /></svg>
+                                            <span>{% if invoice.credit_note_for_invoice_id %}{{ 'Credit Note'|trans }}{% elseif invoice.debit_note_for_invoice_id %}{{ 'Debit Note'|trans }}{% else %}{{ 'Invoice'|trans }}{% endif %}</span>
+                                            <span class="strata-tabular">#{{ invoice.serie_nr }}</span>
+                                        </a>
+                                    </td>
+                                    <td class="strata-tabular text-strata-subtle">{{ invoice.created_at|format_date }}</td>
+                                    <td>{{ mf.status_badge(invoice.status, 'invoice') }}</td>
+                                    <td class="text-end font-semibold text-strata-strong strata-tabular">
+                                        {{ invoice.total|format_currency(invoice.currency ?? default_currency) }}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href='{{ "invoice/#{invoice.hash}"|url }}' class="strata-btn strata-btn-secondary strata-btn-sm">
+                                            <svg class="size-3.5" aria-hidden="true"><use href="#eye" /></svg>
+                                            <span>{{ 'View'|trans }}</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="py-12 px-4 text-center">
+                                        <div class="flex flex-col items-center justify-center gap-2">
+                                            <div class="size-10 rounded-full bg-strata-fill flex items-center justify-center text-strata-subtle">
+                                                <svg class="size-5" aria-hidden="true"><use href="#receipt" /></svg>
+                                            </div>
+                                            <p class="text-sm font-medium text-strata-strong">{{ 'The list is empty'|trans }}</p>
+                                            <p class="text-xs text-strata-subtle">{{ 'No refunded invoices found.'|trans }}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if refunded_invoices.pages > 1 %}
+                        <div class="p-4 border-t border-strata-hairline">
+                            {{ include('partial_pagination.html.twig', { 'list': refunded_invoices, 'url': 'invoice', 'hash': '#nav-refunded' }) }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Canceled Invoices -->
+                <div class="tab-pane" id="nav-canceled" role="tabpanel" aria-labelledby="canceled-tab" tabindex="0" hidden>
+                    <div class="overflow-x-auto">
+                        <table class="strata-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'Invoice'|trans }}</th>
+                                    <th>{{ 'Invoice Date'|trans }}</th>
+                                    <th>{{ 'Status'|trans }}</th>
+                                    <th class="text-end">{{ 'Total'|trans }}</th>
+                                    <th class="text-end">{{ 'Actions'|trans }}</th>
+                                </tr>
+                            </thead>
+                            <tbody data-stagger>
+                            {% for i, invoice in canceled_invoices.list %}
+                                <tr data-stagger-item>
+                                    <td class="font-medium">
+                                        <a href='{{ "invoice/#{invoice.hash}"|url }}' class="text-strata-link hover:underline inline-flex items-center gap-1.5 font-semibold">
+                                            <svg class="size-4 text-strata-subtle" aria-hidden="true"><use href="#receipt" /></svg>
+                                            <span>{% if invoice.credit_note_for_invoice_id %}{{ 'Credit Note'|trans }}{% elseif invoice.debit_note_for_invoice_id %}{{ 'Debit Note'|trans }}{% else %}{{ 'Invoice'|trans }}{% endif %}</span>
+                                            <span class="strata-tabular">#{{ invoice.serie_nr }}</span>
+                                        </a>
+                                    </td>
+                                    <td class="strata-tabular text-strata-subtle">{{ invoice.created_at|format_date }}</td>
+                                    <td>{{ mf.status_badge(invoice.status, 'invoice') }}</td>
+                                    <td class="text-end font-semibold text-strata-strong strata-tabular">
+                                        {{ invoice.total|format_currency(invoice.currency ?? default_currency) }}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href='{{ "invoice/#{invoice.hash}"|url }}' class="strata-btn strata-btn-secondary strata-btn-sm">
+                                            <svg class="size-3.5" aria-hidden="true"><use href="#eye" /></svg>
+                                            <span>{{ 'View'|trans }}</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="py-12 px-4 text-center">
+                                        <div class="flex flex-col items-center justify-center gap-2">
+                                            <div class="size-10 rounded-full bg-strata-fill flex items-center justify-center text-strata-subtle">
+                                                <svg class="size-5" aria-hidden="true"><use href="#receipt" /></svg>
+                                            </div>
+                                            <p class="text-sm font-medium text-strata-strong">{{ 'The list is empty'|trans }}</p>
+                                            <p class="text-xs text-strata-subtle">{{ 'No canceled invoices found.'|trans }}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if canceled_invoices.pages > 1 %}
+                        <div class="p-4 border-t border-strata-hairline">
+                            {{ include('partial_pagination.html.twig', { 'list': canceled_invoices, 'url': 'invoice', 'hash': '#nav-canceled' }) }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ render_widgets('client.invoice.index.after') }}
+{% endblock %}
