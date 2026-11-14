@@ -6,6 +6,16 @@ A clean, responsive client area theme for [FOSSBilling](https://fossbilling.org/
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-v4-06b6d4?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)
 
+## Screenshots
+
+| Dashboard (Light) | Dashboard (Dark) |
+| :---: | :---: |
+| ![Dashboard Light](docs/screenshots/dashboard-light.png) | ![Dashboard Dark](docs/screenshots/dashboard-dark.png) |
+
+| Product Catalog | Invoice & Checkout |
+| :---: | :---: |
+| ![Product Catalog](docs/screenshots/catalog-light.png) | ![Invoice & Checkout](docs/screenshots/invoice-light.png) |
+
 ---
 
 ## Features
