@@ -73,7 +73,7 @@
     <main class="print-container max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div class="print-sheet bg-strata-base border border-strata-hairline rounded-2xl shadow-xs overflow-hidden">
             <!-- Letterhead & Metadata Header -->
-            <div class="p-6 sm:p-8 border-b border-strata-hairline flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+            <div class="p-6 sm:p-8 print:px-0 print:py-6 border-b border-strata-hairline flex flex-col sm:flex-row sm:items-start justify-between gap-6 print:flex-row print:items-start">
                 <div class="space-y-2">
                     {% if company.logo_url %}
                         <img src="{{ company.logo_url }}" alt="{{ seller.company }}" class="h-8 w-auto object-contain" />
@@ -87,7 +87,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-5 text-xs sm:text-end">
+                <div class="grid grid-cols-3 gap-5 text-xs sm:text-end print:text-end">
                     <div>
                         <span class="text-strata-subtle uppercase tracking-wider text-[11px] block">{{ 'Invoice Date'|trans }}</span>
                         <span class="font-semibold text-strata-strong strata-tabular text-sm mt-0.5 block">
@@ -120,7 +120,7 @@
             </div>
 
             <!-- Parties: From & Billed To -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 sm:p-8 border-b border-strata-hairline bg-strata-tint/35">
+            <div class="grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-6 p-6 sm:p-8 print:px-0 print:py-6 border-b border-strata-hairline bg-strata-tint/35 print:bg-transparent">
                 <div>
                     <span class="text-[11px] font-semibold uppercase tracking-wider text-strata-subtle block mb-2">{{ 'From'|trans }}</span>
                     <div class="font-semibold text-sm text-strata-strong">{{ seller.company }}</div>
@@ -164,7 +164,7 @@
             {% endif %}
 
             <!-- Line Items Table -->
-            <div class="overflow-x-auto px-6 sm:px-8 py-6">
+            <div class="overflow-x-auto print:overflow-visible px-6 sm:px-8 print:px-0 py-6">
                 <table class="strata-table">
                     <thead>
                         <tr>
@@ -201,8 +201,8 @@
             </div>
 
             <!-- Totals & Notes Footer -->
-            <div class="p-6 sm:p-8 border-t border-strata-hairline bg-strata-base grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                <div class="md:col-span-6 space-y-3 text-xs text-strata-subtle">
+            <div class="p-6 sm:p-8 print:px-0 print:py-6 border-t border-strata-hairline bg-strata-base grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-6 items-start">
+                <div class="md:col-span-6 print:col-span-6 space-y-3 text-xs text-strata-subtle">
                     {% if has_seller_bank %}
                         <div class="space-y-1">
                             <span class="text-[11px] font-semibold uppercase tracking-wider text-strata-strong block">{{ 'Payment Details'|trans }}</span>
@@ -219,8 +219,8 @@
                     {% endif %}
                 </div>
 
-                <div class="md:col-span-6 md:col-start-7">
-                    <div class="w-full sm:max-w-xs sm:ml-auto space-y-2.5">
+                <div class="md:col-span-6 md:col-start-7 print:col-span-6 print:col-start-7">
+                    <div class="w-full sm:max-w-xs sm:ml-auto print:max-w-xs print:ml-auto space-y-2.5">
                         <div class="flex items-center justify-between text-sm text-strata-subtle">
                             <span>{{ 'Subtotal'|trans }}</span>
                             <span class="strata-tabular text-strata-default font-medium">{{ (invoice.subtotal ?? invoice.total)|format_currency(invoice.currency ?? default_currency) }}</span>
