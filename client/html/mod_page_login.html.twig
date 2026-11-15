@@ -7,7 +7,7 @@
 
 {% block body %}
 <div class="w-full max-w-md mx-auto" data-animate="fade-up">
-    {% if (public_logo_url or public_dark_logo_url) and settings.login_page_show_logo %}
+    {% if settings.login_page_show_logo ?? '1' %}
         <div class="flex justify-center mb-6">
             {{ include('partial_company_logo.html.twig', {
                 company: company,
@@ -43,7 +43,7 @@
             <div>
                 <label class="strata-label" for="email">{{ 'Email'|trans }}</label>
                 <div class="relative">
-                    <input class="strata-input pl-9" id="email" type="email" placeholder="{{ 'Enter your email address'|trans }}" name="email" value="{{ request.email }}" required="required" autofocus>
+                    <input class="strata-input pl-10" id="email" type="email" placeholder="{{ 'Enter your email address'|trans }}" name="email" value="{{ request.email }}" required="required" autofocus>
                     <div class="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center text-strata-subtle">
                         <svg class="size-4" aria-hidden="true"><use href="#mail" /></svg>
                     </div>
@@ -60,7 +60,7 @@
                     {% endif %}
                 </div>
                 <div class="relative">
-                    <input class="strata-input pl-9" id="password" type="password" placeholder="{{ 'Enter your password'|trans }}" name="password" required="required">
+                    <input class="strata-input pl-10" id="password" type="password" placeholder="{{ 'Enter your password'|trans }}" name="password" required="required">
                     <div class="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center text-strata-subtle">
                         <svg class="size-4" aria-hidden="true"><use href="#lock" /></svg>
                     </div>

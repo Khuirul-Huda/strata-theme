@@ -103,8 +103,8 @@
                 <div class="min-w-0 flex items-center [[data-sidebar-collapsed=true]_&]:hidden">
                     {{ include('partial_company_logo.html.twig', {
                         company: company,
-                        logo_url: settings.show_company_logo ? company.logo_url : null,
-                        dark_logo_url: settings.show_company_logo ? company.logo_url_dark : null,
+                        logo_url: (settings.show_company_logo ?? '1') ? company.logo_url : null,
+                        dark_logo_url: (settings.show_company_logo ?? '1') ? company.logo_url_dark : null,
                         link_class: 'inline-flex items-center gap-2 text-base font-semibold tracking-tight text-strata-strong truncate',
                         image_class: 'max-h-9 w-auto object-contain',
                         image_height: '36px',
@@ -146,8 +146,8 @@
                     <div class="{% if show_sidebar %}md:hidden {% endif %}min-w-0 shrink-0">
                         {{ include('partial_company_logo.html.twig', {
                             company: company,
-                            logo_url: settings.show_company_logo ? company.logo_url : null,
-                            dark_logo_url: settings.show_company_logo ? company.logo_url_dark : null,
+                            logo_url: (settings.show_company_logo ?? '1') ? company.logo_url : null,
+                            dark_logo_url: (settings.show_company_logo ?? '1') ? company.logo_url_dark : null,
                             link_class: 'inline-flex items-center gap-2 text-base font-semibold tracking-tight text-strata-strong truncate',
                             image_class: 'hidden sm:block max-h-9 w-auto object-contain',
                             image_height: '36px',
@@ -339,8 +339,8 @@
                             <div class="inline-flex items-center">
                                 {{ include('partial_company_logo.html.twig', {
                                     company: company,
-                                    logo_url: settings.show_company_logo ? company.logo_url : null,
-                                    dark_logo_url: settings.show_company_logo ? company.logo_url_dark : null,
+                                    logo_url: (settings.show_company_logo ?? '1') ? company.logo_url : null,
+                                    dark_logo_url: (settings.show_company_logo ?? '1') ? company.logo_url_dark : null,
                                     link_class: 'inline-flex items-center gap-2 text-base font-semibold tracking-tight text-strata-strong',
                                     image_class: 'max-h-8 w-auto object-contain',
                                     image_height: '32px'

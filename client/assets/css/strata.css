@@ -1,5 +1,5 @@
-@import "@cloudflare/kumo/styles";
 @import "tailwindcss";
+@import "@cloudflare/kumo/styles";
 @source "../../html/**/*.twig";
 @source "../../assets/ts/**/*.ts";
 @import "flag-icons/css/flag-icons.min.css";
