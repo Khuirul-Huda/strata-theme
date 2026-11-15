@@ -35,12 +35,12 @@
 
     {{ include('partials/theme_init.html.twig') }}
 
-    <link rel="stylesheet" href="{{ 'build/css/strata.css' | asset_url }}">
+    <link rel="stylesheet" href="{{ 'build/css/strata.css' | asset_url }}?v=1.0.1">
     <link rel="shortcut icon" href="{{ guest.system_company.favicon_url }}">
 
     {{ 'js/fossbilling.js' | public_asset_url | script_tag }}
     {{ 'js/api.js' | public_asset_url | script_tag }}
-    <script type="module" src="{{ 'build/js/main.js' | asset_url }}"></script>
+    <script type="module" src="{{ 'build/js/main.js' | asset_url }}?v=1.0.1"></script>
 
     {{ debug_bar_render_head() }}
 
@@ -106,7 +106,7 @@
                         logo_url: (settings.show_company_logo ?? '1') ? company.logo_url : null,
                         dark_logo_url: (settings.show_company_logo ?? '1') ? company.logo_url_dark : null,
                         link_class: 'inline-flex items-center gap-2 text-base font-semibold tracking-tight text-strata-strong truncate',
-                        image_class: 'max-h-9 w-auto object-contain',
+                        image_class: 'h-9 w-auto max-w-full object-contain',
                         image_height: '36px',
                         fallback_class: 'truncate'
                     }) }}
@@ -149,7 +149,7 @@
                             logo_url: (settings.show_company_logo ?? '1') ? company.logo_url : null,
                             dark_logo_url: (settings.show_company_logo ?? '1') ? company.logo_url_dark : null,
                             link_class: 'inline-flex items-center gap-2 text-base font-semibold tracking-tight text-strata-strong truncate',
-                            image_class: 'hidden sm:block max-h-9 w-auto object-contain',
+                            image_class: 'hidden sm:block h-9 w-auto max-w-full object-contain',
                             image_height: '36px',
                             show_mobile_name: true,
                             fallback_class: 'truncate'
@@ -342,7 +342,7 @@
                                     logo_url: (settings.show_company_logo ?? '1') ? company.logo_url : null,
                                     dark_logo_url: (settings.show_company_logo ?? '1') ? company.logo_url_dark : null,
                                     link_class: 'inline-flex items-center gap-2 text-base font-semibold tracking-tight text-strata-strong',
-                                    image_class: 'max-h-8 w-auto object-contain',
+                                    image_class: 'h-8 w-auto max-w-full object-contain',
                                     image_height: '32px'
                                 }) }}
                             </div>

@@ -1,6 +1,6 @@
 {
   "name": "Strata (Client Area)",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Modern, animated client area theme built with Tailwind CSS v4 and Bun",
   "icon": "screenshot.jpg",
   "author": "FOSSBilling Community",
