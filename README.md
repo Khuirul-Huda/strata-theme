@@ -31,12 +31,18 @@ A clean, responsive client area theme for [FOSSBilling](https://fossbilling.org/
 
 ## Requirements
 
-- [FOSSBilling](https://fossbilling.org/) (PHP 8.3+)
+- [FOSSBilling](https://fossbilling.org/) (`0.8.9+` / `main`, PHP 8.3+)
 - [Bun](https://bun.sh/) (`>= 1.0`) to build CSS, JS, and SVG icon assets
 
 ---
 
 ## Installation
+
+> **Important (FOSSBilling Version Compatibility):**
+> - **FOSSBilling `main` (Package Theme Structure):** Keep the `strata/client/` directory layout as-is inside `themes/strata/` (or `src/themes/strata/` in source checkouts).
+> - **FOSSBilling `0.8.x` (e.g. `0.8.9`, Flat Theme Structure):** `0.8.x` expects `html/`, `assets/`, `config/`, and `manifest.json` directly under `themes/strata/` (like `themes/huraga/`), **not** nested inside `client/`. Extracting the repo directly as `themes/strata/` on `0.8.x` will cause a `#404 Page not found` error. Follow Option B below.
+
+### Option A — FOSSBilling `main` (Package Layout)
 
 1. Clone this repository into your FOSSBilling themes directory:
 
@@ -52,10 +58,28 @@ A clean, responsive client area theme for [FOSSBilling](https://fossbilling.org/
    NODE_ENV=production bun run build
    ```
 
-3. Activate **Strata (Client Area)** in FOSSBilling:
-   - Open **Admin Panel → System → Settings → Theme** (or **Extensions → Themes**), and set **Strata** as the active client theme.
+### Option B — FOSSBilling `0.8.x` / `0.8.9` (Flat Layout)
 
-> **Note:** Compiled assets under `client/assets/build/` are excluded from Git. Always run `bun run build` after pulling updates or packaging the theme for distribution.
+1. Clone or extract the repository, build inside `client/`, then move `client/` to `themes/strata`:
+
+   ```bash
+   cd /var/www/html/themes
+   git clone https://github.com/Khuirul-Huda/strata-theme.git strata-tmp
+   cd strata-tmp/client
+   bun install
+   NODE_ENV=production bun run build
+   cd /var/www/html/themes
+   mv strata-tmp/client strata
+   rm -rf strata-tmp
+   ```
+
+2. Ensure web server file permissions match your setup (e.g. `chown -R www-data:www-data /var/www/html/themes/strata`).
+
+### Activate Theme
+
+- Open **Admin Panel → System → Settings → Theme** (or **Extensions → Themes**), and set **Strata (Client Area)** as the active client theme.
+
+> **Note:** Compiled assets under `assets/build/` are excluded from Git. Always run `bun run build` after pulling updates or packaging the theme for distribution.
 
 ---
 
