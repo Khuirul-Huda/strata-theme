@@ -270,14 +270,14 @@
 
     <h5 class="mb-2">{{ 'Links'|trans }}</h5>
     <div class="d-flex flex-column gap-3 mb-4">
-        {% for i in 1..5 %}
+        {% for i in [1, 2, 3, 4, 5] %}
             <div class="row g-2 align-items-center">
                 <div class="col-12 col-lg-2">
                     <label class="form-label mb-lg-0">{{ ('Footer Link #' ~ i)|trans }}</label>
                 </div>
                 <div class="col-auto">
                     <label class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" name="footer_link_{{ i }}_enabled" value="1"{% if attribute(settings, 'footer_link_' ~ i ~ '_enabled')|default('0') in ['1', 1, true, 'true', 'on'] %} checked{% endif %}>
+                        <input class="form-check-input" type="checkbox" name="footer_link_{{ i }}_enabled" value="1"{% if settings['footer_link_' ~ i ~ '_enabled']|default('0') in ['1', 1, true, 'true', 'on'] %} checked{% endif %}>
                     </label>
                 </div>
                 <div class="col-lg-4">
