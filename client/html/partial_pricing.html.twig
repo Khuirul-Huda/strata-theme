@@ -45,7 +45,7 @@
                     <select name="period" id="period-selector" class="w-full rounded-lg bg-strata-control border border-strata-line px-3 py-2 text-sm text-strata-default focus:outline-none focus:ring-2 focus:ring-strata-focus">
                         {% for code, prices in pricing.recurrent %}
                             {% if prices.enabled %}
-                                <option value="{{ code }}"{% if request.period == code %} selected="selected"{% endif %}>{{ prices.title }}</option>
+                                <option value="{{ code }}"{% if request.period == code %} selected="selected"{% endif %}>{{ prices.title|default(code|period_title) }}</option>
                             {% endif %}
                         {% endfor %}
                     </select>

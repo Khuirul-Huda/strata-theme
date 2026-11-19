@@ -101,9 +101,9 @@
                                                 <option value="{{ code }}"
                                                         data-price="{{ (prices.price * cart_currency.conversion_rate) }}"
                                                         data-setup="{{ (prices.setup * cart_currency.conversion_rate) }}"
-                                                        data-title="{{ prices.title }}"
+                                                        data-title="{{ prices.title|default(code|period_title) }}"
                                                         {% if request.period == code %}selected="selected"{% endif %}>
-                                                    {{ prices.title }} - {{ (prices.price * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
+                                                    {{ prices.title|default(code|period_title) }} - {{ (prices.price * cart_currency.conversion_rate)|format_currency(cart_currency.code) }}
                                                     {% if prices.setup > 0 %}
                                                         (+{{ (prices.setup * cart_currency.conversion_rate)|format_currency(cart_currency.code) }} {{ 'setup'|trans }})
                                                     {% endif %}
@@ -219,7 +219,7 @@
                                                                 {% if prices.setup != '0.00' %}
                                                                     (+{{ (prices.setup * cart_currency.conversion_rate)|format_currency(cart_currency.code) }} {{ 'setup'|trans }})
                                                                 {% endif %}
-                                                                ({{ prices.title }})
+                                                                ({{ prices.title|default(code|period_title) }})
                                                             </option>
                                                         {% endif %}
                                                     {% endfor %}
