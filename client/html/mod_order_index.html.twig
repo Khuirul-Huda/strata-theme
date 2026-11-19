@@ -18,6 +18,7 @@
 {% block content_before %}{% endblock %}
 
 {% block content %}
+<style>.strata-md p { white-space: pre-line; }</style>
 {% set cart = guest.cart_get %}
 {% set cart_currency = guest.cart_get_currency %}
 {% set currencies = guest.currency_get_pairs %}
@@ -343,7 +344,7 @@
                                 </h3>
 
                                 {% if product.description %}
-                                    <div class="text-sm text-strata-subtle line-clamp-3 mb-6 flex-1 leading-relaxed">
+                                    <div class="prose prose-sm strata-md text-sm text-strata-subtle line-clamp-3 mb-6 flex-1 leading-relaxed">
                                         {{ (product.description ?? '')|markdown_to_html }}
                                     </div>
                                 {% else %}

@@ -67,7 +67,8 @@
                                 {% endif %}
                             </div>
                             {% if product.description %}
-                                <div class="text-sm text-strata-subtle mt-2 leading-relaxed">
+                                <style>.strata-md p { white-space: pre-line; }</style>
+                                <div class="prose prose-sm strata-md text-sm text-strata-subtle mt-2 leading-relaxed">
                                     {{ (product.description ?? '')|markdown_to_html }}
                                 </div>
                             {% endif %}
@@ -150,7 +151,7 @@
                     <div class="rounded-xl bg-strata-recessed border border-strata-hairline p-4 space-y-2">
                         <div class="text-sm font-semibold text-strata-strong">{{ product.title }}</div>
                         {% if product.description %}
-                            <div class="text-xs text-strata-subtle">{{ (product.description ?? '')|markdown_to_html }}</div>
+                            <div class="prose prose-sm strata-md text-xs text-strata-subtle">{{ (product.description ?? '')|markdown_to_html }}</div>
                         {% endif %}
                     </div>
                 {% endset %}
